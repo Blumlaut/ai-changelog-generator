@@ -3,6 +3,7 @@ const github = require('@actions/github');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const ignore = require('ignore');
 
 async function run() {
   try {
@@ -16,6 +17,12 @@ async function run() {
     const model = core.getInput('model');
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
+
+    const ig = ignore();
+    if (fs.existsSync('.gitignore')) {
+      ig.add(fs.readFileSync('.gitignore', 'utf8'));
+    }
+    ig.add(['dist/', 'bin/']);
 
     const headBranch = 'generate-ai-changelog';
 
