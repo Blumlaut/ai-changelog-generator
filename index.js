@@ -59,22 +59,33 @@ async function run() {
       return;
     }
 
-    if (!fs.existsSync('CHANGELOG.md')) {
-      fs.writeFileSync('CHANGELOG.md', '# Changelog\n\n');
+    const date = new Date().toISOString().split('T')[0];
+    const entry = `## ${date}\n${changelog}\n`;
+
+    let existing = '';
+    if (fs.existsSync('CHANGELOG.md')) {
+      existing = fs.readFileSync('CHANGELOG.md', 'utf8');
     }
-    fs.appendFileSync('CHANGELOG.md', `\n${changelog}\n`);
+    if (!existing.startsWith('# Changelog')) {
+      existing = `# Changelog\n\n${existing}`;
+    }
+    const header = '# Changelog';
+    const rest = existing.replace(/^# Changelog\n*/, '');
+    const newContent = `${header}\n\n${entry}${rest}`;
+    fs.writeFileSync('CHANGELOG.md', newContent);
 
     execSync('git config user.name "github-actions"');
     execSync('git config user.email "github-actions@users.noreply.github.com"');
-    execSync('git checkout -B generate-ai-changelog');
+    const headBranch = 'generate-ai-changelog';
+    execSync(`git checkout -B ${headBranch}`);
     execSync('git add CHANGELOG.md');
     execSync('git commit -m "chore: update changelog"');
-    execSync('git push --force origin generate-ai-changelog');
+    execSync(`git push --force origin ${headBranch}`);
 
     const { data: pulls } = await octokit.rest.pulls.list({
       owner,
       repo,
-      head: `generate-ai-changelog`,
+      head: `${owner}:${headBranch}`,
       state: 'open'
     });
 
@@ -83,7 +94,7 @@ async function run() {
         owner,
         repo,
         title: 'chore: update changelog with recent changes',
-        head: 'generate-ai-changelog',
+        head: headBranch,
         base: baseBranch,
         body: 'Automated changelog update.'
       });
