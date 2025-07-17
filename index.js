@@ -34,16 +34,16 @@ async function run() {
     // determine the base commit for collecting new changes
     let baseCommit = '';
     try {
-      baseCommit = execSync(`git rev-parse origin/${headBranch}`, { encoding: 'utf8', stdio: 'pipe' }).trim();
+      baseCommit = execSync(`git rev-parse origin/${headBranch}`, { encoding: 'utf8' }).trim();
     } catch (_) {
       try {
-        baseCommit = execSync('git log -n 1 --pretty=format:%H -- CHANGELOG.md', { encoding: 'utf8', stdio: 'pipe' }).trim();
+        baseCommit = execSync('git log -n 1 --pretty=format:%H -- CHANGELOG.md', { encoding: 'utf8' }).trim();
       } catch (_) {
         baseCommit = '';
       }
     }
 
-    const range = baseCommit ? `${baseCommit}..HEAD` : 'HEAD';
+    const range = baseCommit ? `${baseCommit}..HEAD` : `${baseBranch}..HEAD`;
     const shas = execSync(`git rev-list ${range}`, { encoding: 'utf8' })
       .trim()
       .split('\n')
@@ -105,7 +105,7 @@ async function run() {
 
     let existing = '';
     try {
-      existing = execSync(`git show origin/${headBranch}:CHANGELOG.md`, { encoding: 'utf8', stdio: 'pipe' });
+      existing = execSync(`git show origin/${headBranch}:CHANGELOG.md`, { encoding: 'utf8' });
     } catch (_) {
       if (fs.existsSync('CHANGELOG.md')) {
         existing = fs.readFileSync('CHANGELOG.md', 'utf8');
