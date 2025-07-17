@@ -1,0 +1,24 @@
+name: 'AI Changelog Generator'
+description: 'Generate or update a changelog using AI and open a PR'
+author: 'AI'
+inputs:
+  openai_api_key:
+    description: 'API key for OpenAI'
+    required: true
+  github_token:
+    description: 'GitHub token for pushing commits and creating pull requests'
+    required: true
+  base_branch:
+    description: 'Branch to read commits from'
+    default: 'main'
+    required: false
+  style:
+    description: 'Changelog style: summary or full'
+    default: 'summary'
+    required: false
+runs:
+  using: 'node16'
+  main: 'index.js'
+branding:
+  icon: 'book'
+  color: 'blue'

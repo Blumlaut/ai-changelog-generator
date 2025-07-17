@@ -1,0 +1,17 @@
+name: AI Changelog
+on:
+  push:
+    branches: [main]
+
+jobs:
+  changelog:
+    if: github.ref != 'refs/heads/generate-ai-changelog'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./
+        with:
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
