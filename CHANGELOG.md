@@ -14,3 +14,6 @@
 - Updated @octokit/request-error from 2.1.0 to 5.1.1
 - Merged PR #5: Bump npm_and_yarn group with 4 updates
 - Merged PR #3: Bump @actions/github from 5.1.1 to 6.0.1
+- Updated changelog with recent changes
+- Fixed base commit determination in changelog generation
+- Added check to skip changelog updates when CHANGELOG.md is modified
