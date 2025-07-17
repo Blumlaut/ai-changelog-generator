@@ -22,3 +22,13 @@
 - Updated README.md to reflect CHANGELOG.md ignore changes
 
 - Updated default system prompt in index.js to exclude changelog-related changes from being included in generated changelogs
+
+- Added GitHub workflow for bundling action on push to main branch
+- Updated changelog generation workflow to ignore dist/ and bin/ directories
+- Improved commit filtering logic in changelog generator to use ignore patterns
+- Added ignore package as dependency for better file filtering
+- Fixed missing ignore dependency initialization in changelog generator script
+
+- Added `@vercel/ncc` as a dev dependency for building the project
+- Added build script using `ncc` in package.json
+- Updated package-lock.json with new dependencies
