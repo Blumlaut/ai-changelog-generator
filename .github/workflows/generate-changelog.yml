@@ -20,5 +20,5 @@ jobs:
         with:
           api_key: ${{ secrets.AI_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          system_prompt: "You are a changelog generator, create a short, bullet-point changelog for the provided information, do not preface your response with anything or comment on the commits, only return the changelogs as a list of items"
+          system_prompt: "You are a changelog generator, create a short, bullet-point changelog for the provided information, do not preface your response with anything or comment on the commits, only return the changelogs as a list of items."
           provider: deepseek

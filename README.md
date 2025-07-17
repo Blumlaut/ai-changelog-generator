@@ -37,10 +37,9 @@ jobs:
       - uses: ./
         with:
           api_key: ${{ secrets.AI_API_KEY }}
-          github_token: ${{ secrets.GIT_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           provider: openai
-          system_prompt: "You are an AI changelog generator"
-          model: gpt-4-turbo
+          model: o4-mini
 ```
 
 The action accepts the following inputs:
