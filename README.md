@@ -38,7 +38,6 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci
       - uses: blumlaut/ai-changelog-generator@main
         with:
           api_key: ${{ secrets.AI_API_KEY }}
