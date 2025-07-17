@@ -42,3 +42,7 @@
 - Modified workflow paths in generate-changelog.yml
 - Fixed base commit range determination logic (reverted experimental changes)
 - Added default providers configuration (OpenAI, Deepseek, Anthropic, Ollama)
+
+- Updated README.md to include `fetch-depth: 0` in the checkout step for the GitHub Action workflow
+
+- Improved system prompt for changelog generation to clarify handling of multi-file changes
