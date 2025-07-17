@@ -18,9 +18,6 @@
 - Fixed base commit determination in changelog generation
 - Added check to skip changelog updates when CHANGELOG.md is modified
 
-- Merged pull request #9 from Blumlaut/generate-ai-changelog
-- Updated changelog with recent changes
-
 - Ignored changes to CHANGELOG.md in GitHub Actions workflow
 - Updated README.md to reflect CHANGELOG.md ignore changes
 
