@@ -37,6 +37,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           provider: openai
           system_prompt: "You are an AI changelog generator"
+          model: gpt-4-turbo
 ```
 
 The action accepts the following inputs:
@@ -48,6 +49,7 @@ The action accepts the following inputs:
 - `base_branch` – Branch to track for new commits (default `main`).
 - `style` – `summary` or `full` changelog style.
 - `system_prompt` – Optional system prompt sent to the AI model before the commit summary.
+- `model` – Override the default model used by the provider.
 
 Each provider is implemented as a small module under `providers/`. You can
 add your own module and select it via the `provider` input.

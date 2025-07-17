@@ -13,6 +13,7 @@ async function run() {
     const provider = core.getInput('provider') || 'openai';
     const apiBase = core.getInput('api_base_url');
     const systemPrompt = core.getInput('system_prompt');
+    const model = core.getInput('model');
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
 
@@ -49,7 +50,8 @@ async function run() {
     const changelog = await generateChangelog(prompt, {
       apiKey,
       apiBaseUrl: apiBase,
-      systemPrompt
+      systemPrompt,
+      model
     });
     if (!changelog) {
       core.setFailed('Failed to generate changelog.');
