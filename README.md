@@ -38,7 +38,6 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci
       - uses: blumlaut/ai-changelog-generator@main
         with:
           api_key: ${{ secrets.AI_API_KEY }}
@@ -64,4 +63,6 @@ add your own module and select it via the `provider` input.
 ## Development
 
 The action is implemented in `index.js` and described by `action.yml`.
+Compiled output is committed under `dist/` so you can use the action
+directly from your workflows without running `npm install`.
 It can be published to the GitHub Marketplace for reuse across repositories.
