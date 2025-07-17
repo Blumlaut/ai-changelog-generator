@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 
-async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.anthropic.com', model = 'claude-3-sonnet-20240229' }) {
+async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.anthropic.com', model = 'claude-3-sonnet-20240229', systemPrompt = 'You are a helpful assistant that writes changelog entries.' } = {}) {
   const url = `${apiBaseUrl.replace(/\/$/, '')}/v1/messages`;
   const res = await fetch(url, {
     method: 'POST',
@@ -12,6 +12,7 @@ async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.ant
     body: JSON.stringify({
       model,
       max_tokens: 1024,
+      system: systemPrompt,
       messages: [{ role: 'user', content: prompt }]
     })
   });

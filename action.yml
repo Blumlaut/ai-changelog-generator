@@ -23,6 +23,12 @@ inputs:
     description: 'AI provider to use (openai, deepseek, anthropic, ollama)'
     default: 'openai'
     required: false
+  system_prompt:
+    description: 'Optional system prompt to send to the AI model'
+    required: false
+  model:
+    description: 'Optional model identifier for the provider'
+    required: false
 runs:
   using: 'node16'
   main: 'index.js'
