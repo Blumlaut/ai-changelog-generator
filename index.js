@@ -17,15 +17,26 @@ async function run() {
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
 
-    // fetch last commit that touched CHANGELOG.md
-    let lastCommit;
+    const headBranch = 'generate-ai-changelog';
+
+    // fetch previous changelog branch if it exists
     try {
-      lastCommit = execSync('git log -n 1 --pretty=format:%H -- CHANGELOG.md', { encoding: 'utf8' }).trim();
+      execSync(`git fetch origin ${headBranch}`, { stdio: 'ignore' });
+    } catch (_) {}
+
+    // determine the base commit for collecting new changes
+    let baseCommit = '';
+    try {
+      baseCommit = execSync(`git rev-parse origin/${headBranch}^`, { encoding: 'utf8' }).trim();
     } catch (_) {
-      lastCommit = '';
+      try {
+        baseCommit = execSync('git log -n 1 --pretty=format:%H -- CHANGELOG.md', { encoding: 'utf8' }).trim();
+      } catch (_) {
+        baseCommit = '';
+      }
     }
 
-    let range = lastCommit ? `${lastCommit}..HEAD` : `${baseBranch}..HEAD`;
+    const range = baseCommit ? `${baseCommit}..HEAD` : `${baseBranch}..HEAD`;
     const commits = execSync(`git log ${range} --pretty=format:%s%n%b`, { encoding: 'utf8' });
 
     if (!commits.trim()) {
@@ -63,8 +74,12 @@ async function run() {
     const entry = `## ${date}\n${changelog}\n`;
 
     let existing = '';
-    if (fs.existsSync('CHANGELOG.md')) {
-      existing = fs.readFileSync('CHANGELOG.md', 'utf8');
+    try {
+      existing = execSync(`git show origin/${headBranch}:CHANGELOG.md`, { encoding: 'utf8' });
+    } catch (_) {
+      if (fs.existsSync('CHANGELOG.md')) {
+        existing = fs.readFileSync('CHANGELOG.md', 'utf8');
+      }
     }
     if (!existing.startsWith('# Changelog')) {
       existing = `# Changelog\n\n${existing}`;
@@ -76,7 +91,6 @@ async function run() {
 
     execSync('git config user.name "github-actions"');
     execSync('git config user.email "github-actions@users.noreply.github.com"');
-    const headBranch = 'generate-ai-changelog';
     execSync(`git checkout -B ${headBranch}`);
     execSync('git add CHANGELOG.md');
     execSync('git commit -m "chore: update changelog"');
