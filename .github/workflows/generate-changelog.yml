@@ -15,6 +15,5 @@ jobs:
         with:
           api_key: ${{ secrets.AI_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          provider: openai
-          system_prompt: "You are an AI changelog generator"
-          model: gpt-4-turbo
+          system_prompt: "You are a changelog generator, create a short, bullet-point changelog for the provided information"
+          provider: deepseek
