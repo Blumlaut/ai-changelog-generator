@@ -14,7 +14,3 @@
 - Updated @octokit/request-error from 2.1.0 to 5.1.1
 - Merged PR #5: Bump npm_and_yarn group with 4 updates
 - Merged PR #3: Bump @actions/github from 5.1.1 to 6.0.1
-## 2025-07-17
-- Updated index.js
-## 2025-07-17
-- Updated instructions
