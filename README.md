@@ -38,6 +38,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: blumlaut/ai-changelog-generator@main
         with:
           api_key: ${{ secrets.AI_API_KEY }}
