@@ -29,6 +29,8 @@ on:
 jobs:
   changelog:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
