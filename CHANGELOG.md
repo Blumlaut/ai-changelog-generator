@@ -32,3 +32,13 @@
 - Added `@vercel/ncc` as a dev dependency for building the project
 - Added build script using `ncc` in package.json
 - Updated package-lock.json with new dependencies
+
+- Updated `action.yml` to change the main script path from `index.js` to `dist/index.js`
+
+- Updated README.md to clarify GitHub Actions permissions requirements
+
+- Removed npm CI usage in favor of bundled files
+- Updated provider handling to use predefined providers instead of dynamic imports
+- Modified workflow paths in generate-changelog.yml
+- Fixed base commit range determination logic (reverted experimental changes)
+- Added default providers configuration (OpenAI, Deepseek, Anthropic, Ollama)
