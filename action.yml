@@ -31,7 +31,7 @@ inputs:
     required: false
 runs:
   using: 'node20'
-  main: 'index.js'
+  main: 'dist/index.js'
 branding:
   icon: 'book'
   color: 'blue'
