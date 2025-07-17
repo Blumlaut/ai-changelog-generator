@@ -31,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: npm ci
       - uses: ./
         with:
           api_key: ${{ secrets.AI_API_KEY }}
