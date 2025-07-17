@@ -30713,6 +30713,107 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 2569:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const core = __nccwpck_require__(7484);
+const fetch = global.fetch || ((...args) =>
+  __nccwpck_require__.e(/* import() */ 266).then(__nccwpck_require__.t.bind(__nccwpck_require__, 5266, 23)).then(({ default: fetch }) => fetch(...args)));
+
+async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.anthropic.com', model = 'claude-3-sonnet-20240229', systemPrompt = 'You are a helpful assistant that writes changelog entries.' } = {}) {
+  const url = `${apiBaseUrl.replace(/\/$/, '')}/v1/messages`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      core.error(`Anthropic request failed: ${res.status} ${res.statusText}`);
+      core.error(text);
+      return '';
+    }
+    const data = await res.json();
+    if (data.content && data.content.length) {
+      return data.content[0].text.trim();
+    }
+    return '';
+  } catch (err) {
+    core.error(`Anthropic fetch error: ${err.message}`);
+    return '';
+  }
+}
+
+module.exports = { generateChangelog };
+
+
+/***/ }),
+
+/***/ 9827:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { generateChangelog: openaiGenerateChangelog } = __nccwpck_require__(755);
+
+async function generateChangelog(prompt, opts = {}) {
+  if (!opts.apiBaseUrl) {
+    opts.apiBaseUrl = 'https://api.deepseek.com';
+  }
+  if (!opts.model) {
+    opts.model = 'deepseek-chat';
+  }
+  return openaiGenerateChangelog(prompt, opts);
+}
+
+module.exports = { generateChangelog };
+
+
+/***/ }),
+
+/***/ 23:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const core = __nccwpck_require__(7484);
+const fetch = global.fetch || ((...args) =>
+  __nccwpck_require__.e(/* import() */ 266).then(__nccwpck_require__.t.bind(__nccwpck_require__, 5266, 23)).then(({ default: fetch }) => fetch(...args)));
+
+async function generateChangelog(prompt, { apiBaseUrl = 'http://localhost:11434', model = 'llama3', systemPrompt = 'You are a helpful assistant that writes changelog entries.' } = {}) {
+  const url = `${apiBaseUrl.replace(/\/$/, '')}/api/generate`;
+  const finalPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, prompt: finalPrompt, stream: false })
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      core.error(`Ollama request failed: ${res.status} ${res.statusText}`);
+      core.error(text);
+      return '';
+    }
+    const data = await res.json();
+    return data.response ? data.response.trim() : '';
+  } catch (err) {
+    core.error(`Ollama fetch error: ${err.message}`);
+    return '';
+  }
+}
+
+module.exports = { generateChangelog };
+
+
+/***/ }),
+
 /***/ 755:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -32802,6 +32903,13 @@ const fs = __nccwpck_require__(9896);
 const path = __nccwpck_require__(6928);
 const ignore = __nccwpck_require__(298);
 
+const providers = {
+  openai: __nccwpck_require__(755),
+  deepseek: __nccwpck_require__(9827),
+  anthropic: __nccwpck_require__(2569),
+  ollama: __nccwpck_require__(23)
+};
+
 async function run() {
   try {
     const apiKey = core.getInput('api_key', { required: true });
@@ -32809,7 +32917,7 @@ async function run() {
     const baseBranch = core.getInput('base_branch') || 'main';
     const style = core.getInput('style') || 'summary';
     const provider = core.getInput('provider') || 'openai';
-    const apiBase = core.getInput('api_base_url');
+    const apiBase = core.getInput('api_base_url') || undefined;
     const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information, do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs.";
     const model = core.getInput('model');
     const octokit = github.getOctokit(token);
@@ -32872,18 +32980,11 @@ async function run() {
 
     const prompt = `Generate a ${style} changelog entry for the following git commits:\n${commits}`;
 
-    let providerPath;
-    try {
-      providerPath = __nccwpck_require__.ab + "providers/" + provider;
-      // eslint-disable-next-line import/no-dynamic-require
-      var { generateChangelog } = require(providerPath); // dynamic import
-    } catch (_) {
+    let { generateChangelog } = providers[provider] || {};
+    if (!generateChangelog) {
       core.warning(`Unknown provider "${provider}", falling back to openai.`);
-      providerPath = path.join(__dirname, 'providers', 'openai');
-      // eslint-disable-next-line import/no-dynamic-require
-      var { generateChangelog } = __nccwpck_require__(755);
+      ({ generateChangelog } = providers.openai);
     }
-
     const changelog = await generateChangelog(prompt, {
       apiKey,
       apiBaseUrl: apiBase,
