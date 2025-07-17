@@ -2,9 +2,12 @@ name: 'AI Changelog Generator'
 description: 'Generate or update a changelog using AI and open a PR'
 author: 'AI'
 inputs:
-  openai_api_key:
-    description: 'API key for OpenAI'
+  api_key:
+    description: 'API key for the selected AI provider'
     required: true
+  api_base_url:
+    description: 'Override the base URL for the AI provider'
+    required: false
   github_token:
     description: 'GitHub token for pushing commits and creating pull requests'
     required: true
@@ -15,6 +18,10 @@ inputs:
   style:
     description: 'Changelog style: summary or full'
     default: 'summary'
+    required: false
+  provider:
+    description: 'AI provider to use (openai, deepseek, anthropic, ollama)'
+    default: 'openai'
     required: false
 runs:
   using: 'node16'

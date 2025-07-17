@@ -3,9 +3,9 @@
 This repository contains a reusable GitHub Action that automatically
 updates `CHANGELOG.md` using an AI model. On every push to the base
 branch, the action collects commit messages since the last changelog
-update, requests a summary from OpenAI (or compatible API) and pushes the
-changes to a `generate-ai-changelog` branch. A pull request is opened or
-updated with the generated changelog.
+update, sends them to an AI provider such as OpenAI, Deepseek, Anthropic
+or Ollama, then pushes the result to a `generate-ai-changelog` branch.
+A pull request is opened or updated with the generated changelog.
 
 ## Usage
 
@@ -24,16 +24,22 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./
         with:
-          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          api_key: ${{ secrets.AI_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          provider: openai
 ```
 
 The action accepts the following inputs:
 
-- `openai_api_key` (required) – API key for the AI provider.
+- `api_key` (required) – API key for the chosen AI provider.
+- `api_base_url` – Override the provider API base URL.
+- `provider` – Which provider module to use (`openai`, `deepseek`, `anthropic`, `ollama`).
 - `github_token` (required) – Token used to push changes and open PRs.
 - `base_branch` – Branch to track for new commits (default `main`).
 - `style` – `summary` or `full` changelog style.
+
+Each provider is implemented as a small module under `providers/`. You can
+add your own module and select it via the `provider` input.
 
 ## Development
 

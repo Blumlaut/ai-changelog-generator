@@ -13,5 +13,6 @@ jobs:
           fetch-depth: 0
       - uses: ./
         with:
-          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          api_key: ${{ secrets.AI_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          provider: openai

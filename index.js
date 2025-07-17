@@ -1,15 +1,17 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
-const fetch = require('node-fetch');
 const { execSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 
 async function run() {
   try {
-    const apiKey = core.getInput('openai_api_key', { required: true });
+    const apiKey = core.getInput('api_key', { required: true });
     const token = core.getInput('github_token', { required: true });
     const baseBranch = core.getInput('base_branch') || 'main';
     const style = core.getInput('style') || 'summary';
+    const provider = core.getInput('provider') || 'openai';
+    const apiBase = core.getInput('api_base_url');
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
 
@@ -30,20 +32,23 @@ async function run() {
     }
 
     const prompt = `Generate a ${style} changelog entry for the following git commits:\n${commits}`;
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
 
-    const data = await res.json();
-    const changelog = data.choices && data.choices[0] && data.choices[0].message.content.trim();
+    let providerPath;
+    try {
+      providerPath = path.join(__dirname, 'providers', provider);
+      // eslint-disable-next-line import/no-dynamic-require
+      var { generateChangelog } = require(providerPath); // dynamic import
+    } catch (_) {
+      core.warning(`Unknown provider "${provider}", falling back to openai.`);
+      providerPath = path.join(__dirname, 'providers', 'openai');
+      // eslint-disable-next-line import/no-dynamic-require
+      var { generateChangelog } = require(providerPath);
+    }
+
+    const changelog = await generateChangelog(prompt, {
+      apiKey,
+      apiBaseUrl: apiBase
+    });
     if (!changelog) {
       core.setFailed('Failed to generate changelog.');
       return;
