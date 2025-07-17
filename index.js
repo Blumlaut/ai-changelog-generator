@@ -43,18 +43,23 @@ async function run() {
       .filter(Boolean)
       .reverse();
 
-    let commits = '';
-    for (const sha of shas) {
-      const files = execSync(`git show --pretty="" --name-only ${sha}`, { encoding: 'utf8' })
-        .trim()
-        .split('\n');
-      if (files.includes('CHANGELOG.md')) {
-        continue;
-      }
-      const message = execSync(`git show -s --format=%s%n%b ${sha}`, { encoding: 'utf8' });
-      const diff = execSync(`git show ${sha} --patch --no-color --no-prefix`, { encoding: 'utf8' });
-      commits += `Commit ${sha}\n${message}\n${diff}\n`;
+  let commits = '';
+  for (const sha of shas) {
+    const files = execSync(`git show --pretty="" --name-only ${sha}`, { encoding: 'utf8' })
+      .trim()
+      .split('\n')
+      .filter(Boolean);
+    const relevant = files.filter(f => !ig.ignores(f));
+    if (relevant.length === 0 || relevant.every(f => f === 'CHANGELOG.md')) {
+      continue;
     }
+    const message = execSync(`git show -s --format=%s%n%b ${sha}`, { encoding: 'utf8' });
+    const diff = execSync(`git show ${sha} --patch --no-color --no-prefix -- ${relevant.join(' ')}`, { encoding: 'utf8' });
+    if (!diff.trim()) {
+      continue;
+    }
+    commits += `Commit ${sha}\n${message}\n${diff}\n`;
+  }
 
     if (!commits.trim()) {
       core.info('No new commits found for changelog generation.');
