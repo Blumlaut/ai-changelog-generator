@@ -17,6 +17,6 @@ jobs:
       - uses: ./
         with:
           api_key: ${{ secrets.AI_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GIT_TOKEN }}
           system_prompt: "You are a changelog generator, create a short, bullet-point changelog for the provided information"
           provider: deepseek
