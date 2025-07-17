@@ -4,9 +4,16 @@
   "description": "GitHub Action to generate changelog entries using AI",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "build": "ncc build index.js -o dist"
+  },
   "dependencies": {
     "@actions/core": "^1.10.0",
     "@actions/github": "^6.0.1",
     "ignore": "^7.0.5"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.0"
   }
+
 }
