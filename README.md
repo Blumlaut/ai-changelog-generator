@@ -5,7 +5,9 @@ updates `CHANGELOG.md` using an AI model. On every push to the base
 branch, the action collects commit messages since the last changelog
 update, sends them to an AI provider such as OpenAI, Deepseek, Anthropic
 or Ollama, then pushes the result to a `generate-ai-changelog` branch.
-A pull request is opened or updated with the generated changelog.
+A pull request is opened or updated with the generated changelog. Each
+entry is prepended to `CHANGELOG.md` under the current date so the
+latest changes appear first.
 
 ## Adding to your repository
 
