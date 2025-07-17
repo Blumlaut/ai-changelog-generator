@@ -27,7 +27,7 @@ async function run() {
     // determine the base commit for collecting new changes
     let baseCommit = '';
     try {
-      baseCommit = execSync(`git rev-parse origin/${headBranch}^`, { encoding: 'utf8' }).trim();
+      baseCommit = execSync(`git rev-parse origin/${headBranch}`, { encoding: 'utf8' }).trim();
     } catch (_) {
       try {
         baseCommit = execSync('git log -n 1 --pretty=format:%H -- CHANGELOG.md', { encoding: 'utf8' }).trim();
@@ -45,6 +45,12 @@ async function run() {
 
     let commits = '';
     for (const sha of shas) {
+      const files = execSync(`git show --pretty="" --name-only ${sha}`, { encoding: 'utf8' })
+        .trim()
+        .split('\n');
+      if (files.includes('CHANGELOG.md')) {
+        continue;
+      }
       const message = execSync(`git show -s --format=%s%n%b ${sha}`, { encoding: 'utf8' });
       const diff = execSync(`git show ${sha} --patch --no-color --no-prefix`, { encoding: 'utf8' });
       commits += `Commit ${sha}\n${message}\n${diff}\n`;
