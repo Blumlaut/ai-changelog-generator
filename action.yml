@@ -30,7 +30,7 @@ inputs:
     description: 'Optional model identifier for the provider'
     required: false
 runs:
-  using: 'node22'
+  using: 'node20'
   main: 'index.js'
 branding:
   icon: 'book'
