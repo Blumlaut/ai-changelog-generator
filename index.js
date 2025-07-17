@@ -5,6 +5,13 @@ const fs = require('fs');
 const path = require('path');
 const ignore = require('ignore');
 
+const providers = {
+  openai: require('./providers/openai'),
+  deepseek: require('./providers/deepseek'),
+  anthropic: require('./providers/anthropic'),
+  ollama: require('./providers/ollama')
+};
+
 async function run() {
   try {
     const apiKey = core.getInput('api_key', { required: true });
@@ -12,7 +19,7 @@ async function run() {
     const baseBranch = core.getInput('base_branch') || 'main';
     const style = core.getInput('style') || 'summary';
     const provider = core.getInput('provider') || 'openai';
-    const apiBase = core.getInput('api_base_url');
+    const apiBase = core.getInput('api_base_url') || undefined;
     const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information, do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs.";
     const model = core.getInput('model');
     const octokit = github.getOctokit(token);
@@ -75,18 +82,11 @@ async function run() {
 
     const prompt = `Generate a ${style} changelog entry for the following git commits:\n${commits}`;
 
-    let providerPath;
-    try {
-      providerPath = path.join(__dirname, 'providers', provider);
-      // eslint-disable-next-line import/no-dynamic-require
-      var { generateChangelog } = require(providerPath); // dynamic import
-    } catch (_) {
+    let { generateChangelog } = providers[provider] || {};
+    if (!generateChangelog) {
       core.warning(`Unknown provider "${provider}", falling back to openai.`);
-      providerPath = path.join(__dirname, 'providers', 'openai');
-      // eslint-disable-next-line import/no-dynamic-require
-      var { generateChangelog } = require(providerPath);
+      ({ generateChangelog } = providers.openai);
     }
-
     const changelog = await generateChangelog(prompt, {
       apiKey,
       apiBaseUrl: apiBase,
