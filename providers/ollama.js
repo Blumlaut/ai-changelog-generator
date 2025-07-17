@@ -1,3 +1,4 @@
+const fetch = require('node-fetch');
 
 async function generateChangelog(prompt, { apiBaseUrl = 'http://localhost:11434', model = 'llama3', systemPrompt = 'You are a helpful assistant that writes changelog entries.' } = {}) {
   const url = `${apiBaseUrl.replace(/\/$/, '')}/api/generate`;

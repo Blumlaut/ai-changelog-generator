@@ -1,3 +1,4 @@
+const fetch = require('node-fetch');
 
 async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.openai.com', model = 'gpt-3.5-turbo', systemPrompt = 'You are a helpful assistant that writes changelog entries.' } = {}) {
   const url = `${apiBaseUrl.replace(/\/$/, '')}/v1/chat/completions`;

@@ -54,6 +54,7 @@ async function run() {
       model
     });
     if (!changelog) {
+      core.error(`Failed to generate changelog for "${provider}".`);
       core.setFailed('Failed to generate changelog.');
       return;
     }
