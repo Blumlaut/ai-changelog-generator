@@ -26,6 +26,8 @@ name: AI Changelog
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - CHANGELOG.md
 
 jobs:
   changelog:
