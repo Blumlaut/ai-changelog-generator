@@ -82,7 +82,8 @@ async function run() {
     }
 
     const date = new Date().toISOString().split('T')[0];
-    const entry = `## ${date}\n${changelog}\n`;
+    const dateHeader = `## ${date}`;
+    const entry = `${changelog}\n`;
 
     let existing = '';
     try {
@@ -96,8 +97,22 @@ async function run() {
       existing = `# Changelog\n\n${existing}`;
     }
     const header = '# Changelog';
-    const rest = existing.replace(/^# Changelog\n*/, '');
-    const newContent = `${header}\n\n${entry}${rest}`;
+    let rest = existing.replace(/^# Changelog\n*/, '');
+
+    if (rest.startsWith(`${dateHeader}\n`)) {
+      const lines = rest.split('\n');
+      let i = 1;
+      while (i < lines.length && !lines[i].startsWith('## ')) {
+        i++;
+      }
+      const current = lines.slice(0, i).join('\n');
+      const remainder = lines.slice(i).join('\n');
+      rest = `${current}\n${entry}${remainder}`.replace(/\n+$/, '\n');
+    } else {
+      rest = `${dateHeader}\n${entry}${rest}`;
+    }
+
+    const newContent = `${header}\n\n${rest}`;
     fs.writeFileSync('CHANGELOG.md', newContent);
 
     execSync('git config user.name "github-actions"');
