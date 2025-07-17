@@ -32918,7 +32918,7 @@ async function run() {
     const style = core.getInput('style') || 'summary';
     const provider = core.getInput('provider') || 'openai';
     const apiBase = core.getInput('api_base_url') || undefined;
-    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information, do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs.";
+    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information, do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs. If one commit modifies multiple files, keep the summary of the change to one bullet point.";
     const model = core.getInput('model');
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
