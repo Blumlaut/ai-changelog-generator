@@ -8,7 +8,7 @@ jobs:
     if: github.ref != 'refs/heads/generate-ai-changelog'
     runs-on: ubuntu-latest
     permissions:
-      issues: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,6 +17,6 @@ jobs:
       - uses: ./
         with:
           api_key: ${{ secrets.AI_API_KEY }}
-          github_token: ${{ secrets.GIT_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           system_prompt: "You are a changelog generator, create a short, bullet-point changelog for the provided information"
           provider: deepseek
