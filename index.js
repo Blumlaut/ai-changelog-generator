@@ -96,6 +96,7 @@ async function run() {
       });
     }
   } catch (err) {
+    core.error(err.stack || err.message);
     core.setFailed(err.message);
   }
 }
