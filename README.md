@@ -36,10 +36,9 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm ci
-      - uses: blumlaut/ai-changelog-generator@main
+      steps:
+        - uses: actions/checkout@v4
+        - uses: blumlaut/ai-changelog-generator@main
         with:
           api_key: ${{ secrets.AI_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
