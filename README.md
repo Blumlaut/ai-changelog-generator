@@ -14,7 +14,7 @@ latest changes appear first.
 1. Copy the workflow from `.github/workflows/generate-changelog.yml` into your
    repository.
 2. Provide your AI provider API key as a secret named `AI_API_KEY`.
-3. Ensure your Repository has "Allow GitHub Actions to create and approve pull requests" Enabled in the Github Action Settings
+3. Ensure your Repository has "Allow GitHub Actions to create and approve pull requests" and Read/Write Permissions enabled in the Github Action Settings
 
 
 ## Usage
