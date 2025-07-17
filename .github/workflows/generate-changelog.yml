@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: ./
+      - uses: ./dist/
         with:
           api_key: ${{ secrets.AI_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
