@@ -13,9 +13,8 @@ latest changes appear first.
 
 1. Copy the workflow from `.github/workflows/generate-changelog.yml` into your
    repository.
-2. Replace the `uses: ./` line with `uses: owner/ai-changelog-generator@main` or
-   a pinned version.
-3. Provide your AI provider API key as a secret named `AI_API_KEY`.
+2. Provide your AI provider API key as a secret named `AI_API_KEY`.
+3. Ensure your Repository has "Allow GitHub Actions to create and approve pull requests" Enabled in the Github Action Settings
 
 
 ## Usage
@@ -32,11 +31,13 @@ jobs:
   changelog:
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
-      - uses: ./
+      - uses: blumlaut/ai-changelog-generator@main
         with:
           api_key: ${{ secrets.AI_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
