@@ -12,7 +12,7 @@ async function run() {
     const style = core.getInput('style') || 'summary';
     const provider = core.getInput('provider') || 'openai';
     const apiBase = core.getInput('api_base_url');
-    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, bullet-point changelog for the provided information, do not preface your response with anything or comment on the commits, only return the changelogs as a list of items.";
+    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information, do not preface your response with anything or comment on the commits, only return the changelogs as a list of items.";
     const model = core.getInput('model');
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
@@ -37,7 +37,18 @@ async function run() {
     }
 
     const range = baseCommit ? `${baseCommit}..HEAD` : `${baseBranch}..HEAD`;
-    const commits = execSync(`git log ${range} --pretty=format:%s%n%b`, { encoding: 'utf8' });
+    const shas = execSync(`git rev-list ${range}`, { encoding: 'utf8' })
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .reverse();
+
+    let commits = '';
+    for (const sha of shas) {
+      const message = execSync(`git show -s --format=%s%n%b ${sha}`, { encoding: 'utf8' });
+      const diff = execSync(`git show ${sha} --patch --no-color --no-prefix`, { encoding: 'utf8' });
+      commits += `Commit ${sha}\n${message}\n${diff}\n`;
+    }
 
     if (!commits.trim()) {
       core.info('No new commits found for changelog generation.');
