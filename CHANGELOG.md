@@ -3,6 +3,11 @@
 ## 2025-07-18
 - Updated README.md with instructions to create a "CHANGELOG.md" file
 - Updated README.md to remove development section and streamline documentation
+- Added support for using git tags as a reference point for changelog generation via new `use_tags` input
+- Introduced configurable changelog file path through new `changelog_path` input
+- Improved changelog header generation to use tag names when available
+- Refactored base commit detection logic to handle both tag-based and branch-based approaches
+- Updated changelog file handling to be dynamic based on configured path
 ## 2025-07-17
 - Added git diff output to commit information in changelog generation
 - Modified system prompt to request more informative changelog entries
