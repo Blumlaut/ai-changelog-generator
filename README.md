@@ -61,8 +61,3 @@ The action accepts the following inputs:
 
 Each provider is implemented as a small module under `providers/`. You can
 add your own module and select it via the `provider` input.
-
-## Development
-
-The action is implemented in `index.js` and described by `action.yml`.
-It can be published to the GitHub Marketplace for reuse across repositories.
