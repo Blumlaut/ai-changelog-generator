@@ -1,5 +1,8 @@
 # Changelog
 
+## 2025-07-18
+- Updated README.md with instructions to create a "CHANGELOG.md" file
+- Updated README.md to remove development section and streamline documentation
 ## 2025-07-17
 - Added git diff output to commit information in changelog generation
 - Modified system prompt to request more informative changelog entries
