@@ -7,6 +7,8 @@
 - Introduced configurable changelog file path through new `changelog_path` input parameter
 - Improved changelog header generation to use either latest tag or current date based on configuration
 - Refactored changelog generation logic to be more flexible with file paths and tag references
+- Added `changelog_path` input option to specify custom changelog file location
+- Added `use_tags` input option to enable git tags-based changelog generation
 ## 2025-07-17
 - Added git diff output to commit information in changelog generation
 - Modified system prompt to request more informative changelog entries
