@@ -10,7 +10,7 @@ entry is prepended to `CHANGELOG.md` under the current date so the
 latest changes appear first.
 
 ## Adding to your repository
-
+0. Create a "CHANGELOG.md" file with the contents of "# Changelog" in your main brain.
 1. Copy the workflow from `.github/workflows/generate-changelog.yml` into your
    repository.
 2. Provide your AI provider API key as a secret named `AI_API_KEY`.
