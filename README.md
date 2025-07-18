@@ -55,6 +55,8 @@ The action accepts the following inputs:
 - `provider` – Which provider module to use (`openai`, `deepseek`, `anthropic`, `ollama`).
 - `github_token` (required) – Token used to push changes and open PRs.
 - `base_branch` – Branch to track for new commits (default `main`).
+- `changelog_path` - path of your changelog file (default `CHANGELOG.md`)
+- `use_tags` - Use git tags instead of rolling release style (default `false`)
 - `style` – `summary` or `full` changelog style.
 - `system_prompt` – Optional system prompt sent to the AI model before the commit summary.
 - `model` – Override the default model used by the provider.
