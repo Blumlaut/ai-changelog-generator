@@ -1,5 +1,7 @@
 # Changelog
 
+## 2025-10-04
+- Updated @vercel/ncc development dependency from version 0.38.3 to 0.38.4
 ## 2025-07-18
 - Updated README.md with instructions to create a "CHANGELOG.md" file
 - Updated README.md to remove development section and streamline documentation
