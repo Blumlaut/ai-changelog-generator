@@ -13,7 +13,7 @@
     "ignore": "^7.0.5"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.0"
+    "@vercel/ncc": "^0.38.4"
   }
 
 }
