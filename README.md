@@ -60,6 +60,8 @@ The action accepts the following inputs:
 - `style` – `summary` or `full` changelog style.
 - `system_prompt` – Optional system prompt sent to the AI model before the commit summary.
 - `model` – Override the default model used by the provider.
+- `max_tokens` – Maximum tokens allowed per prompt (default `12000`). Reduce this value if you're experiencing token limit errors.
+- `max_diff_chars` – Maximum characters per diff (default `5000`). Reduce this value to limit the size of diffs included in prompts.
 
 Each provider is implemented as a small module under `providers/`. You can
 add your own module and select it via the `provider` input.
