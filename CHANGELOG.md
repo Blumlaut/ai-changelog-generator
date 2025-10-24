@@ -1,5 +1,14 @@
 # Changelog
 
+## 2025-10-24
+- Added new configuration options for token and diff size limits in README.md
+- Refactored main application logic into modular components with improved commit processing
+- Enhanced logging throughout the application with detailed progress information
+- Added bundle script to package.json for improved build process
+- Fixed missing import in DeepSeek provider module
+- Improved token handling and diff truncation logic in commit processor
+- Updated AI provider modules with additional debugging information
+- Added comprehensive test coverage for new modular components
 ## 2025-10-04
 - Updated @vercel/ncc development dependency from version 0.38.3 to 0.38.4
 ## 2025-07-18
