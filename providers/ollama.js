@@ -1,10 +1,13 @@
 const core = require('@actions/core');
-const fetch = global.fetch || ((...args) =>
-  import('node-fetch').then(({ default: fetch }) => fetch(...args)));
+const fetch = global.fetch || (async (...args) =>
+  (await import('node-fetch')).default(...args));
 
 async function generateChangelog(prompt, { apiBaseUrl = 'http://localhost:11434', model = 'llama3', systemPrompt = 'You are a helpful assistant that writes changelog entries.' } = {}) {
   const url = `${apiBaseUrl.replace(/\/$/, '')}/api/generate`;
   const finalPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+  
+  core.debug(`Sending Ollama request with prompt length: ${finalPrompt.length}`);
+  
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -18,7 +21,15 @@ async function generateChangelog(prompt, { apiBaseUrl = 'http://localhost:11434'
       return '';
     }
     const data = await res.json();
-    return data.response ? data.response.trim() : '';
+    const response = data.response ? data.response.trim() : '';
+    
+    core.debug(`Ollama response received (length: ${response ? response.length : 0})`);
+    
+    if (response) {
+      core.debug(`Ollama response preview: ${response.substring(0, 200)}...`);
+    }
+    
+    return response;
   } catch (err) {
     core.error(`Ollama fetch error: ${err.message}`);
     return '';

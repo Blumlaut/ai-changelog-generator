@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "ncc build index.js -o dist",
+    "bundle": "npm ci && npx ncc build index.js -o dist",
     "test": "node --test"
   },
   "dependencies": {

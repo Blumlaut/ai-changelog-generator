@@ -142,11 +142,14 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
   }
   ig.add(['dist/', 'bin/']);
   
+  console.info(`Starting bucketing process for ${commits.length} commits`);
+  
   for (const sha of commits) {
     const files = getFilesForCommit(sha);
     const relevant = files.filter(f => !ig.ignores(f));
     
     if (relevant.length === 0 || relevant.every(f => f === changelogPath)) {
+      console.debug(`Skipping commit ${sha} - no relevant files or only changelog file`);
       continue;
     }
     
@@ -174,6 +177,7 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
     }
   }
   
+  console.info(`Completed bucketing: ${commitBuckets.size} buckets created from ${commits.length} commits`);
   return commitBuckets;
 }
 
@@ -188,8 +192,12 @@ function buildPromptFromCommits(commitBuckets, maxTokens, style) {
   let commits = '';
   let totalTokens = 0;
   
+  console.info(`Building prompt from ${commitBuckets.size} commit buckets`);
+  
   // Process each file's commits with token awareness
   for (const [path, bucketCommits] of commitBuckets) {
+    console.debug(`Processing bucket for path: ${path} with ${bucketCommits.length} commits`);
+    
     // For each file, we'll create batches of commits to stay within token limits
     let currentBatch = [];
     let batchTokens = 0;
@@ -235,6 +243,11 @@ function buildPromptFromCommits(commitBuckets, maxTokens, style) {
   // Add a warning if prompt is very large
   if (totalTokens > maxTokens * 0.9) { // Warn if we're at 90% of limit
     console.warn(`Prompt is approaching token limit (${totalTokens}/${maxTokens}). Consider reducing max_diff_chars or using a provider with higher limits.`);
+  }
+  
+  // Additional check for empty prompt
+  if (commits.trim() === '') {
+    console.warn('Built prompt is empty - this may indicate all commits were filtered out or had no content');
   }
   
   return { prompt, totalTokens };

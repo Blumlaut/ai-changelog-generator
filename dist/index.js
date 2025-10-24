@@ -30717,11 +30717,14 @@ function wrappy (fn, cb) {
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(7484);
-const fetch = global.fetch || ((...args) =>
-  __nccwpck_require__.e(/* import() */ 266).then(__nccwpck_require__.t.bind(__nccwpck_require__, 5266, 23)).then(({ default: fetch }) => fetch(...args)));
+const fetch = global.fetch || (async (...args) =>
+  (await __nccwpck_require__.e(/* import() */ 266).then(__nccwpck_require__.t.bind(__nccwpck_require__, 5266, 23))).default(...args));
 
 async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.anthropic.com', model = 'claude-3-sonnet-20240229', systemPrompt = 'You are a helpful assistant that writes changelog entries.' } = {}) {
   const url = `${apiBaseUrl.replace(/\/$/, '')}/v1/messages`;
+  
+  core.debug(`Sending Anthropic request with prompt length: ${prompt.length}`);
+  
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -30744,10 +30747,15 @@ async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.ant
       return '';
     }
     const data = await res.json();
-    if (data.content && data.content.length) {
-      return data.content[0].text.trim();
+    const response = data.content && data.content.length ? data.content[0].text.trim() : '';
+    
+    core.debug(`Anthropic response received (length: ${response ? response.length : 0})`);
+    
+    if (response) {
+      core.debug(`Anthropic response preview: ${response.substring(0, 200)}...`);
     }
-    return '';
+    
+    return response;
   } catch (err) {
     core.error(`Anthropic fetch error: ${err.message}`);
     return '';
@@ -30771,7 +30779,14 @@ async function generateChangelog(prompt, opts = {}) {
   if (!opts.model) {
     opts.model = 'deepseek-chat';
   }
-  return openaiGenerateChangelog(prompt, opts);
+  
+  core.debug(`Sending Deepseek request with prompt length: ${prompt.length}`);
+  
+  const result = await openaiGenerateChangelog(prompt, opts);
+  
+  core.debug(`Deepseek response received (length: ${result ? result.length : 0})`);
+  
+  return result;
 }
 
 module.exports = { generateChangelog };
@@ -30783,12 +30798,15 @@ module.exports = { generateChangelog };
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(7484);
-const fetch = global.fetch || ((...args) =>
-  __nccwpck_require__.e(/* import() */ 266).then(__nccwpck_require__.t.bind(__nccwpck_require__, 5266, 23)).then(({ default: fetch }) => fetch(...args)));
+const fetch = global.fetch || (async (...args) =>
+  (await __nccwpck_require__.e(/* import() */ 266).then(__nccwpck_require__.t.bind(__nccwpck_require__, 5266, 23))).default(...args));
 
 async function generateChangelog(prompt, { apiBaseUrl = 'http://localhost:11434', model = 'llama3', systemPrompt = 'You are a helpful assistant that writes changelog entries.' } = {}) {
   const url = `${apiBaseUrl.replace(/\/$/, '')}/api/generate`;
   const finalPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+  
+  core.debug(`Sending Ollama request with prompt length: ${finalPrompt.length}`);
+  
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -30802,7 +30820,15 @@ async function generateChangelog(prompt, { apiBaseUrl = 'http://localhost:11434'
       return '';
     }
     const data = await res.json();
-    return data.response ? data.response.trim() : '';
+    const response = data.response ? data.response.trim() : '';
+    
+    core.debug(`Ollama response received (length: ${response ? response.length : 0})`);
+    
+    if (response) {
+      core.debug(`Ollama response preview: ${response.substring(0, 200)}...`);
+    }
+    
+    return response;
   } catch (err) {
     core.error(`Ollama fetch error: ${err.message}`);
     return '';
@@ -30818,8 +30844,8 @@ module.exports = { generateChangelog };
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const core = __nccwpck_require__(7484);
-const fetch = global.fetch || ((...args) =>
-  __nccwpck_require__.e(/* import() */ 266).then(__nccwpck_require__.t.bind(__nccwpck_require__, 5266, 23)).then(({ default: fetch }) => fetch(...args)));
+const fetch = global.fetch || (async (...args) =>
+  (await __nccwpck_require__.e(/* import() */ 266).then(__nccwpck_require__.t.bind(__nccwpck_require__, 5266, 23))).default(...args));
 
 async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.openai.com', model = 'gpt-3.5-turbo', systemPrompt = 'You are a helpful assistant that writes changelog entries.' } = {}) {
   const url = `${apiBaseUrl.replace(/\/$/, '')}/v1/chat/completions`;
@@ -30828,6 +30854,9 @@ async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.ope
     messages.push({ role: 'system', content: systemPrompt });
   }
   messages.push({ role: 'user', content: prompt });
+  
+  core.debug(`Sending AI request with prompt length: ${prompt.length}`);
+  
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -30840,14 +30869,24 @@ async function generateChangelog(prompt, { apiKey, apiBaseUrl = 'https://api.ope
         messages
       })
     });
+    
     if (!res.ok) {
       const text = await res.text();
       core.error(`OpenAI request failed: ${res.status} ${res.statusText}`);
       core.error(text);
       return '';
     }
+    
     const data = await res.json();
-    return data.choices && data.choices[0] && data.choices[0].message.content.trim();
+    const response = data.choices && data.choices[0] && data.choices[0].message.content.trim();
+    
+    core.debug(`AI response received (length: ${response ? response.length : 0})`);
+    
+    if (response) {
+      core.debug(`AI response preview: ${response.substring(0, 200)}...`);
+    }
+    
+    return response;
   } catch (err) {
     core.error(`OpenAI fetch error: ${err.message}`);
     return '';
@@ -31153,11 +31192,14 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
   }
   ig.add(['dist/', 'bin/']);
   
+  console.info(`Starting bucketing process for ${commits.length} commits`);
+  
   for (const sha of commits) {
     const files = getFilesForCommit(sha);
     const relevant = files.filter(f => !ig.ignores(f));
     
     if (relevant.length === 0 || relevant.every(f => f === changelogPath)) {
+      console.debug(`Skipping commit ${sha} - no relevant files or only changelog file`);
       continue;
     }
     
@@ -31185,6 +31227,7 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
     }
   }
   
+  console.info(`Completed bucketing: ${commitBuckets.size} buckets created from ${commits.length} commits`);
   return commitBuckets;
 }
 
@@ -31199,8 +31242,12 @@ function buildPromptFromCommits(commitBuckets, maxTokens, style) {
   let commits = '';
   let totalTokens = 0;
   
+  console.info(`Building prompt from ${commitBuckets.size} commit buckets`);
+  
   // Process each file's commits with token awareness
   for (const [path, bucketCommits] of commitBuckets) {
+    console.debug(`Processing bucket for path: ${path} with ${bucketCommits.length} commits`);
+    
     // For each file, we'll create batches of commits to stay within token limits
     let currentBatch = [];
     let batchTokens = 0;
@@ -31246,6 +31293,11 @@ function buildPromptFromCommits(commitBuckets, maxTokens, style) {
   // Add a warning if prompt is very large
   if (totalTokens > maxTokens * 0.9) { // Warn if we're at 90% of limit
     console.warn(`Prompt is approaching token limit (${totalTokens}/${maxTokens}). Consider reducing max_diff_chars or using a provider with higher limits.`);
+  }
+  
+  // Additional check for empty prompt
+  if (commits.trim() === '') {
+    console.warn('Built prompt is empty - this may indicate all commits were filtered out or had no content');
   }
   
   return { prompt, totalTokens };
@@ -33299,7 +33351,7 @@ module.exports = parseParams
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-const core = __nccwpck_require__(7484);
+const index_core = __nccwpck_require__(7484);
 const github = __nccwpck_require__(3228);
 const { execSync, spawnSync } = __nccwpck_require__(5317);
 const fs = __nccwpck_require__(9896);
@@ -33319,52 +33371,87 @@ const changelogHandler = __nccwpck_require__(9327);
 
 async function run() {
   try {
-    const apiKey = core.getInput('api_key', { required: true });
-    const token = core.getInput('github_token', { required: true });
-    const baseBranch = core.getInput('base_branch') || 'main';
-    const style = core.getInput('style') || 'summary';
-    const provider = core.getInput('provider') || 'openai';
-    const apiBase = core.getInput('api_base_url') || undefined;
-    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information. For each file path or component that was modified, summarize all commits affecting that path/component into a single high-level bullet point. Do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs. If one commit modifies multiple files, keep the summary of the change to one bullet point. When multiple commits affect the same file, consolidate them into a single bullet point that captures the overall change for that file.";
-    const model = core.getInput('model');
-    const useTags = core.getInput('use_tags') === 'true' || false;
-    const changelogPath = core.getInput('changelog_path') || 'CHANGELOG.md';
-    const maxTokens = parseInt(core.getInput('max_tokens')) || 12000; // Default to 12k tokens
-    const maxDiffChars = parseInt(core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff
+    index_core.info('Starting AI Changelog Generator job');
+    
+    const apiKey = index_core.getInput('api_key', { required: true });
+    const token = index_core.getInput('github_token', { required: true });
+    const baseBranch = index_core.getInput('base_branch') || 'main';
+    const style = index_core.getInput('style') || 'summary';
+    const provider = index_core.getInput('provider') || 'openai';
+    const apiBase = index_core.getInput('api_base_url') || undefined;
+    const systemPrompt = index_core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information. For each file path or component that was modified, summarize all commits affecting that path/component into a single high-level bullet point. Do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs. If one commit modifies multiple files, keep the summary of the change to one bullet point. When multiple commits affect the same file, consolidate them into a single bullet point that captures the overall change for that file.";
+    const model = index_core.getInput('model');
+    const useTags = index_core.getInput('use_tags') === 'true' || false;
+    const changelogPath = index_core.getInput('changelog_path') || 'CHANGELOG.md';
+    const maxTokens = parseInt(index_core.getInput('max_tokens')) || 12000; // Default to 12k tokens
+    const maxDiffChars = parseInt(index_core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
     
     const headBranch = 'generate-ai-changelog';
     
+    index_core.info(`Collecting commits from ${baseBranch}..HEAD`);
+    
     // Collect commits from git
     const shas = commitProcessor.collectCommitsFromGit(baseBranch, headBranch, changelogPath, useTags);
+    
+    index_core.info(`Collected ${shas.length} commits`);
+    
+    if (shas.length === 0) {
+      index_core.info('No commits found for changelog generation.');
+      return;
+    }
     
     // Bucket commits by file path
     const commitBuckets = commitProcessor.bucketCommitsByFile(shas, changelogPath, maxDiffChars);
     
+    index_core.info(`Created ${commitBuckets.size} commit buckets`);
+    
+    // Check if we have any buckets (this could be the source of empty diff bucket issue)
+    if (commitBuckets.size === 0) {
+      index_core.warning('No commit buckets created - this may indicate empty diff buckets or all commits filtered out');
+      index_core.info('This could be the source of the AI returning "I need the actual git commits" message');
+      return;
+    }
+    
     // Build prompt from buckets
     const { prompt, totalTokens } = commitProcessor.buildPromptFromCommits(commitBuckets, maxTokens, style);
     
+    index_core.info(`Built prompt with ${totalTokens} estimated tokens`);
+    
     if (!prompt.trim()) {
-      core.info('No new commits found for changelog generation.');
+      index_core.info('No prompt content generated for changelog generation.');
+      index_core.warning('This may indicate empty commit buckets or all commits filtered out');
       return;
     }
     
     let { generateChangelog } = providers[provider] || {};
     if (!generateChangelog) {
-      core.warning(`Unknown provider "${provider}", falling back to openai.`);
+      index_core.warning(`Unknown provider "${provider}", falling back to openai.`);
       ({ generateChangelog } = providers.openai);
     }
+    
+    index_core.info(`Calling ${provider} AI provider for changelog generation`);
+    
     const changelog = await generateChangelog(prompt, {
       apiKey,
       apiBaseUrl: apiBase,
       systemPrompt,
       model
     });
+    
+    index_core.info(`AI provider returned response (length: ${changelog ? changelog.length : 0})`);
+    
     if (!changelog) {
-      core.error(`Failed to generate changelog for "${provider}".`);
-      core.setFailed('Failed to generate changelog.');
+      index_core.error(`Failed to generate changelog for "${provider}".`);
+      index_core.setFailed('Failed to generate changelog.');
       return;
+    }
+    
+    // Check if AI response contains the problematic message
+    if (changelog.includes('I need the actual git commits or commit information to generate a changelog')) {
+      index_core.warning('AI response contains the problematic message - this may indicate empty diff buckets');
+      index_core.warning('AI response: ' + changelog.substring(0, 200) + '...');
     }
     
     // Generate header
@@ -33393,9 +33480,11 @@ async function run() {
       'chore: update changelog with recent changes',
       'Automated changelog update.'
     );
+    
+    index_core.info('AI Changelog Generator job completed successfully');
   } catch (err) {
-    core.error(err.stack || err.message);
-    core.setFailed(err.message);
+    index_core.error(err.stack || err.message);
+    index_core.setFailed(err.message);
   }
 }
 

@@ -18,6 +18,8 @@ const changelogHandler = require('./src/changelogHandler');
 
 async function run() {
   try {
+    core.info('Starting AI Changelog Generator job');
+    
     const apiKey = core.getInput('api_key', { required: true });
     const token = core.getInput('github_token', { required: true });
     const baseBranch = core.getInput('base_branch') || 'main';
@@ -35,17 +37,38 @@ async function run() {
     
     const headBranch = 'generate-ai-changelog';
     
+    core.info(`Collecting commits from ${baseBranch}..HEAD`);
+    
     // Collect commits from git
     const shas = commitProcessor.collectCommitsFromGit(baseBranch, headBranch, changelogPath, useTags);
+    
+    core.info(`Collected ${shas.length} commits`);
+    
+    if (shas.length === 0) {
+      core.info('No commits found for changelog generation.');
+      return;
+    }
     
     // Bucket commits by file path
     const commitBuckets = commitProcessor.bucketCommitsByFile(shas, changelogPath, maxDiffChars);
     
+    core.info(`Created ${commitBuckets.size} commit buckets`);
+    
+    // Check if we have any buckets (this could be the source of empty diff bucket issue)
+    if (commitBuckets.size === 0) {
+      core.warning('No commit buckets created - this may indicate empty diff buckets or all commits filtered out');
+      core.info('This could be the source of the AI returning "I need the actual git commits" message');
+      return;
+    }
+    
     // Build prompt from buckets
     const { prompt, totalTokens } = commitProcessor.buildPromptFromCommits(commitBuckets, maxTokens, style);
     
+    core.info(`Built prompt with ${totalTokens} estimated tokens`);
+    
     if (!prompt.trim()) {
-      core.info('No new commits found for changelog generation.');
+      core.info('No prompt content generated for changelog generation.');
+      core.warning('This may indicate empty commit buckets or all commits filtered out');
       return;
     }
     
@@ -54,16 +77,28 @@ async function run() {
       core.warning(`Unknown provider "${provider}", falling back to openai.`);
       ({ generateChangelog } = providers.openai);
     }
+    
+    core.info(`Calling ${provider} AI provider for changelog generation`);
+    
     const changelog = await generateChangelog(prompt, {
       apiKey,
       apiBaseUrl: apiBase,
       systemPrompt,
       model
     });
+    
+    core.info(`AI provider returned response (length: ${changelog ? changelog.length : 0})`);
+    
     if (!changelog) {
       core.error(`Failed to generate changelog for "${provider}".`);
       core.setFailed('Failed to generate changelog.');
       return;
+    }
+    
+    // Check if AI response contains the problematic message
+    if (changelog.includes('I need the actual git commits or commit information to generate a changelog')) {
+      core.warning('AI response contains the problematic message - this may indicate empty diff buckets');
+      core.warning('AI response: ' + changelog.substring(0, 200) + '...');
     }
     
     // Generate header
@@ -92,6 +127,8 @@ async function run() {
       'chore: update changelog with recent changes',
       'Automated changelog update.'
     );
+    
+    core.info('AI Changelog Generator job completed successfully');
   } catch (err) {
     core.error(err.stack || err.message);
     core.setFailed(err.message);
