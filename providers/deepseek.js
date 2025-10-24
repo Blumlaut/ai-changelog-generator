@@ -1,3 +1,4 @@
+const core = require('@actions/core');
 const { generateChangelog: openaiGenerateChangelog } = require('./openai');
 
 async function generateChangelog(prompt, opts = {}) {

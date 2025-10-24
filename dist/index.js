@@ -30770,6 +30770,7 @@ module.exports = { generateChangelog };
 /***/ 9827:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+const core = __nccwpck_require__(7484);
 const { generateChangelog: openaiGenerateChangelog } = __nccwpck_require__(755);
 
 async function generateChangelog(prompt, opts = {}) {
@@ -33351,7 +33352,7 @@ module.exports = parseParams
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-const index_core = __nccwpck_require__(7484);
+const core = __nccwpck_require__(7484);
 const github = __nccwpck_require__(3228);
 const { execSync, spawnSync } = __nccwpck_require__(5317);
 const fs = __nccwpck_require__(9896);
@@ -33371,67 +33372,67 @@ const changelogHandler = __nccwpck_require__(9327);
 
 async function run() {
   try {
-    index_core.info('Starting AI Changelog Generator job');
+    core.info('Starting AI Changelog Generator job');
     
-    const apiKey = index_core.getInput('api_key', { required: true });
-    const token = index_core.getInput('github_token', { required: true });
-    const baseBranch = index_core.getInput('base_branch') || 'main';
-    const style = index_core.getInput('style') || 'summary';
-    const provider = index_core.getInput('provider') || 'openai';
-    const apiBase = index_core.getInput('api_base_url') || undefined;
-    const systemPrompt = index_core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information. For each file path or component that was modified, summarize all commits affecting that path/component into a single high-level bullet point. Do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs. If one commit modifies multiple files, keep the summary of the change to one bullet point. When multiple commits affect the same file, consolidate them into a single bullet point that captures the overall change for that file.";
-    const model = index_core.getInput('model');
-    const useTags = index_core.getInput('use_tags') === 'true' || false;
-    const changelogPath = index_core.getInput('changelog_path') || 'CHANGELOG.md';
-    const maxTokens = parseInt(index_core.getInput('max_tokens')) || 12000; // Default to 12k tokens
-    const maxDiffChars = parseInt(index_core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff
+    const apiKey = core.getInput('api_key', { required: true });
+    const token = core.getInput('github_token', { required: true });
+    const baseBranch = core.getInput('base_branch') || 'main';
+    const style = core.getInput('style') || 'summary';
+    const provider = core.getInput('provider') || 'openai';
+    const apiBase = core.getInput('api_base_url') || undefined;
+    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information. For each file path or component that was modified, summarize all commits affecting that path/component into a single high-level bullet point. Do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs. If one commit modifies multiple files, keep the summary of the change to one bullet point. When multiple commits affect the same file, consolidate them into a single bullet point that captures the overall change for that file.";
+    const model = core.getInput('model');
+    const useTags = core.getInput('use_tags') === 'true' || false;
+    const changelogPath = core.getInput('changelog_path') || 'CHANGELOG.md';
+    const maxTokens = parseInt(core.getInput('max_tokens')) || 12000; // Default to 12k tokens
+    const maxDiffChars = parseInt(core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
     
     const headBranch = 'generate-ai-changelog';
     
-    index_core.info(`Collecting commits from ${baseBranch}..HEAD`);
+    core.info(`Collecting commits from ${baseBranch}..HEAD`);
     
     // Collect commits from git
     const shas = commitProcessor.collectCommitsFromGit(baseBranch, headBranch, changelogPath, useTags);
     
-    index_core.info(`Collected ${shas.length} commits`);
+    core.info(`Collected ${shas.length} commits`);
     
     if (shas.length === 0) {
-      index_core.info('No commits found for changelog generation.');
+      core.info('No commits found for changelog generation.');
       return;
     }
     
     // Bucket commits by file path
     const commitBuckets = commitProcessor.bucketCommitsByFile(shas, changelogPath, maxDiffChars);
     
-    index_core.info(`Created ${commitBuckets.size} commit buckets`);
+    core.info(`Created ${commitBuckets.size} commit buckets`);
     
     // Check if we have any buckets (this could be the source of empty diff bucket issue)
     if (commitBuckets.size === 0) {
-      index_core.warning('No commit buckets created - this may indicate empty diff buckets or all commits filtered out');
-      index_core.info('This could be the source of the AI returning "I need the actual git commits" message');
+      core.warning('No commit buckets created - this may indicate empty diff buckets or all commits filtered out');
+      core.info('This could be the source of the AI returning "I need the actual git commits" message');
       return;
     }
     
     // Build prompt from buckets
     const { prompt, totalTokens } = commitProcessor.buildPromptFromCommits(commitBuckets, maxTokens, style);
     
-    index_core.info(`Built prompt with ${totalTokens} estimated tokens`);
+    core.info(`Built prompt with ${totalTokens} estimated tokens`);
     
     if (!prompt.trim()) {
-      index_core.info('No prompt content generated for changelog generation.');
-      index_core.warning('This may indicate empty commit buckets or all commits filtered out');
+      core.info('No prompt content generated for changelog generation.');
+      core.warning('This may indicate empty commit buckets or all commits filtered out');
       return;
     }
     
     let { generateChangelog } = providers[provider] || {};
     if (!generateChangelog) {
-      index_core.warning(`Unknown provider "${provider}", falling back to openai.`);
+      core.warning(`Unknown provider "${provider}", falling back to openai.`);
       ({ generateChangelog } = providers.openai);
     }
     
-    index_core.info(`Calling ${provider} AI provider for changelog generation`);
+    core.info(`Calling ${provider} AI provider for changelog generation`);
     
     const changelog = await generateChangelog(prompt, {
       apiKey,
@@ -33440,18 +33441,18 @@ async function run() {
       model
     });
     
-    index_core.info(`AI provider returned response (length: ${changelog ? changelog.length : 0})`);
+    core.info(`AI provider returned response (length: ${changelog ? changelog.length : 0})`);
     
     if (!changelog) {
-      index_core.error(`Failed to generate changelog for "${provider}".`);
-      index_core.setFailed('Failed to generate changelog.');
+      core.error(`Failed to generate changelog for "${provider}".`);
+      core.setFailed('Failed to generate changelog.');
       return;
     }
     
     // Check if AI response contains the problematic message
     if (changelog.includes('I need the actual git commits or commit information to generate a changelog')) {
-      index_core.warning('AI response contains the problematic message - this may indicate empty diff buckets');
-      index_core.warning('AI response: ' + changelog.substring(0, 200) + '...');
+      core.warning('AI response contains the problematic message - this may indicate empty diff buckets');
+      core.warning('AI response: ' + changelog.substring(0, 200) + '...');
     }
     
     // Generate header
@@ -33481,10 +33482,10 @@ async function run() {
       'Automated changelog update.'
     );
     
-    index_core.info('AI Changelog Generator job completed successfully');
+    core.info('AI Changelog Generator job completed successfully');
   } catch (err) {
-    index_core.error(err.stack || err.message);
-    index_core.setFailed(err.message);
+    core.error(err.stack || err.message);
+    core.setFailed(err.message);
   }
 }
 
