@@ -1,5 +1,15 @@
 # Changelog
 
+## 2025-10-24
+- Added `max_tokens` and `max_diff_chars` configuration options to control prompt size and diff truncation
+- Refactored main index.js into modular components with commitProcessor and changelogHandler modules
+- Implemented commit bucketing by file path to consolidate changes for better changelog generation
+- Added token counting and limiting functionality to prevent exceeding model token limits
+- Created comprehensive test suite for new functionality
+- Updated package.json version to 1.1.0 and added test script
+- Enhanced system prompt to consolidate multiple commits affecting the same file into single bullet points
+- Improved diff handling with character limits and truncation warnings
+I need the actual git commits or commit information to generate a changelog. Could you please provide the commit messages, file changes, or other details about the commits you'd like me to summarize?
 ## 2025-10-04
 - Updated @vercel/ncc development dependency from version 0.38.3 to 0.38.4
 ## 2025-07-18
