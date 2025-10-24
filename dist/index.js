@@ -30859,6 +30859,409 @@ module.exports = { generateChangelog };
 
 /***/ }),
 
+/***/ 9327:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { execSync } = __nccwpck_require__(5317);
+const fs = __nccwpck_require__(9896);
+
+/**
+ * Generates a header for the changelog entry
+ * @param {boolean} useTags - Whether to use git tags as reference
+ * @returns {string} Header string
+ */
+function generateChangelogHeader(useTags) {
+  if (useTags) {
+    try {
+      const latestTag = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
+      return `## ${latestTag}`;
+    } catch {
+      return `## ${new Date().toISOString().split('T')[0]}`;
+    }
+  } else {
+    return `## ${new Date().toISOString().split('T')[0]}`;
+  }
+}
+
+/**
+ * Reads existing changelog content
+ * @param {string} headBranch - The branch name to check
+ * @param {string} changelogPath - Path to the changelog file
+ * @returns {string} Existing changelog content
+ */
+function readExistingChangelog(headBranch, changelogPath) {
+  let existing = '';
+  try {
+    existing = execSync(`git show origin/${headBranch}:${changelogPath}`, { encoding: 'utf8' });
+  } catch (_) {
+    if (fs.existsSync(changelogPath)) {
+      existing = fs.readFileSync(changelogPath, 'utf8');
+    }
+  }
+  
+  if (!existing.startsWith('# Changelog')) {
+    existing = `# Changelog\n\n${existing}`;
+  }
+  
+  return existing;
+}
+
+/**
+ * Updates changelog content with new entry
+ * @param {string} existing - Existing changelog content
+ * @param {string} header - Header for the new entry
+ * @param {string} entry - New changelog entry
+ * @param {string} changelogPath - Path to the changelog file
+ * @returns {string} Updated changelog content
+ */
+function updateChangelogContent(existing, header, entry, changelogPath) {
+  const mainHeader = '# Changelog';
+  let rest = existing.replace(/^# Changelog\n*/, '');
+  
+  if (rest.startsWith(`${header}\n`)) {
+    const lines = rest.split('\n');
+    let i = 1;
+    while (i < lines.length && !lines[i].startsWith('## ')) {
+      i++;
+    }
+    const current = lines.slice(0, i).join('\n');
+    const remainder = lines.slice(i).join('\n');
+    rest = `${current}\n${entry}${remainder}`.replace(/\n+$/, '\n');
+  } else {
+    rest = `${header}\n${entry}${rest}`;
+  }
+  
+  return `${mainHeader}\n\n${rest}`;
+}
+
+/**
+ * Writes updated changelog to file
+ * @param {string} changelogPath - Path to the changelog file
+ * @param {string} content - Content to write
+ */
+function writeChangelog(changelogPath, content) {
+  fs.writeFileSync(changelogPath, content);
+}
+
+/**
+ * Creates or updates a pull request with the changelog changes
+ * @param {object} octokit - Octokit instance
+ * @param {string} owner - Repository owner
+ * @param {string} repo - Repository name
+ * @param {string} headBranch - Branch name
+ * @param {string} baseBranch - Base branch name
+ * @param {string} title - Pull request title
+ * @param {string} body - Pull request body
+ */
+async function createOrUpdatePullRequest(octokit, owner, repo, headBranch, baseBranch, title, body) {
+  const { data: pulls } = await octokit.rest.pulls.list({
+    owner,
+    repo,
+    head: `${owner}:${headBranch}`,
+    state: 'open'
+  });
+  
+  if (pulls.length === 0) {
+    await octokit.rest.pulls.create({
+      owner,
+      repo,
+      title,
+      head: headBranch,
+      base: baseBranch,
+      body
+    });
+  } else {
+    await octokit.rest.pulls.update({
+      owner,
+      repo,
+      pull_number: pulls[0].number,
+      body
+    });
+  }
+}
+
+/**
+ * Handles git operations for pushing changelog changes
+ * @param {string} headBranch - Branch name
+ * @param {string} changelogPath - Path to the changelog file
+ */
+function handleGitOperations(headBranch, changelogPath) {
+  execSync('git config user.name "github-actions"');
+  execSync('git config user.email "github-actions@users.noreply.github.com"');
+  execSync(`git checkout -B ${headBranch}`);
+  execSync(`git add ${changelogPath}`);
+  execSync('git commit -m "chore: update changelog"');
+  execSync(`git push --force origin ${headBranch}`);
+}
+
+module.exports = {
+  generateChangelogHeader,
+  readExistingChangelog,
+  updateChangelogContent,
+  writeChangelog,
+  createOrUpdatePullRequest,
+  handleGitOperations
+};
+
+
+/***/ }),
+
+/***/ 6714:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { execSync, spawnSync } = __nccwpck_require__(5317);
+const fs = __nccwpck_require__(9896);
+const ignore = __nccwpck_require__(298);
+
+// Simple token counting function (approximates tokens as 4 chars per token for ASCII text)
+function countTokens(text) {
+  if (!text) return 0;
+  // This is a rough approximation - in practice, you might want to use a proper tokenizer
+  // For now, we'll estimate based on character count
+  return Math.ceil(text.length / 4);
+}
+
+/**
+ * Collects commits from git history
+ * @param {string} baseBranch - The base branch to compare against
+ * @param {string} headBranch - The head branch to compare against
+ * @param {string} changelogPath - Path to the changelog file
+ * @param {boolean} useTags - Whether to use git tags as reference
+ * @returns {Array} Array of commit objects
+ */
+function collectCommitsFromGit(baseBranch, headBranch, changelogPath, useTags) {
+  try {
+    // fetch previous changelog branch if it exists
+    try {
+      execSync(`git fetch origin ${headBranch}`, { stdio: 'ignore' });
+    } catch (_) {}
+    
+    // determine the base commit for collecting new changes
+    let baseCommit = '';
+    // if using tags as a reference, fetch it first
+    if (useTags) {
+      try {
+        const latestTag = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
+        baseCommit = execSync(`git rev-list -n 1 ${latestTag}`, { encoding: 'utf8' }).trim();
+      } catch (err) {
+        console.warn('No tags found, using default commit tracking');
+      }
+    } else {
+      try {
+        baseCommit = execSync(`git rev-parse origin/${headBranch}`, { encoding: 'utf8' }).trim();
+      } catch (_) {
+        try {
+          baseCommit = execSync(`git log -n 1 --pretty=format:%H -- ${changelogPath}`, { encoding: 'utf8' }).trim();
+        } catch (_) {
+          baseCommit = '';
+        }
+      }
+    }
+    
+    const range = baseCommit ? `${baseCommit}..HEAD` : `${baseBranch}..HEAD`;
+    const shas = execSync(`git rev-list ${range}`, { encoding: 'utf8' })
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .reverse();
+    
+    return shas;
+  } catch (error) {
+    console.error('Error collecting commits:', error);
+    throw error;
+  }
+}
+
+/**
+ * Gets file changes for a specific commit
+ * @param {string} sha - Git commit SHA
+ * @returns {Array} Array of file paths
+ */
+function getFilesForCommit(sha) {
+  try {
+    const files = execSync(`git show --pretty="" --name-only ${sha}`, { encoding: 'utf8' })
+    .trim()
+    .split('\n')
+    .filter(Boolean);
+    return files;
+  } catch (error) {
+    console.error(`Error getting files for commit ${sha}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Gets commit message for a specific commit
+ * @param {string} sha - Git commit SHA
+ * @returns {string} Commit message
+ */
+function getCommitMessage(sha) {
+  try {
+    const message = execSync(`git show -s --format=%s%n%b ${sha}`, { encoding: 'utf8' });
+    return message;
+  } catch (error) {
+    console.error(`Error getting message for commit ${sha}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Gets diff for a specific commit and files
+ * @param {string} sha - Git commit SHA
+ * @param {Array} files - Array of file paths
+ * @returns {string} Diff content
+ */
+function getCommitDiff(sha, files) {
+  try {
+    // Use spawnSync with separate arguments for safety (avoiding shell injection)
+    const gitArgs = ['show', sha, '--patch', '--no-color', '--no-prefix', '--', ...files];
+    const diffResult = spawnSync('git', gitArgs, { encoding: 'utf8' });
+    let diff = diffResult.stdout;
+    if (!diff.trim()) {
+      return '';
+    }
+    return diff;
+  } catch (error) {
+    console.error(`Error getting diff for commit ${sha}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Normalizes file path for consistent bucketing
+ * @param {string} filePath - Original file path
+ * @returns {string} Normalized file path
+ */
+function normalizeFilePath(filePath) {
+  // Remove leading dots and slashes
+  return filePath.replace(/^\.?\//, '');
+}
+
+/**
+ * Buckets commits by file path
+ * @param {Array} commits - Array of commit objects
+ * @param {string} changelogPath - Path to the changelog file
+ * @param {number} maxDiffChars - Maximum characters per diff
+ * @returns {Map} Map of file paths to commit arrays
+ */
+function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
+  const commitBuckets = new Map();
+  const ig = ignore();
+  
+  if (fs.existsSync('.gitignore')) {
+    ig.add(fs.readFileSync('.gitignore', 'utf8'));
+  }
+  ig.add(['dist/', 'bin/']);
+  
+  for (const sha of commits) {
+    const files = getFilesForCommit(sha);
+    const relevant = files.filter(f => !ig.ignores(f));
+    
+    if (relevant.length === 0 || relevant.every(f => f === changelogPath)) {
+      continue;
+    }
+    
+    const message = getCommitMessage(sha);
+    const diff = getCommitDiff(sha, relevant);
+    
+    // Truncate diff if it's too large
+    if (diff && diff.length > maxDiffChars) {
+      const truncatedDiff = diff.substring(0, maxDiffChars) + '\n... (diff truncated due to size limit)';
+      console.info(`Diff for commit ${sha} truncated from ${diff.length} to ${maxDiffChars} characters`);
+      // Note: In the original code, we don't update the diff here, but we could modify to pass truncated diff
+    }
+    
+    // Bucket commits by normalized file path
+    for (const file of relevant) {
+      const normalizedPath = normalizeFilePath(file);
+      if (!commitBuckets.has(normalizedPath)) {
+        commitBuckets.set(normalizedPath, []);
+      }
+      commitBuckets.get(normalizedPath).push({
+        sha,
+        message,
+        diff
+      });
+    }
+  }
+  
+  return commitBuckets;
+}
+
+/**
+ * Builds prompt from commit buckets with token awareness
+ * @param {Map} commitBuckets - Map of file paths to commit arrays
+ * @param {number} maxTokens - Maximum tokens allowed
+ * @param {string} style - Changelog style
+ * @returns {Object} Object containing prompt text and token count
+ */
+function buildPromptFromCommits(commitBuckets, maxTokens, style) {
+  let commits = '';
+  let totalTokens = 0;
+  
+  // Process each file's commits with token awareness
+  for (const [path, bucketCommits] of commitBuckets) {
+    // For each file, we'll create batches of commits to stay within token limits
+    let currentBatch = [];
+    let batchTokens = 0;
+    
+    for (const commit of bucketCommits) {
+      // Estimate tokens for this commit
+      const commitText = `Files: ${path}\nCommit ${commit.sha}\n${commit.message}\n${commit.diff}\n\n`;
+      const commitTokens = countTokens(commitText);
+      
+      // If adding this commit would exceed token limits, start a new batch
+      if (currentBatch.length > 0 && (batchTokens + commitTokens) > maxTokens) {
+        // Add the current batch to the prompt
+        for (const batchCommit of currentBatch) {
+          commits += `Files: ${path}\n`;
+          commits += `Commit ${batchCommit.sha}\n${batchCommit.message}\n${batchCommit.diff}\n\n`;
+          totalTokens += countTokens(`Files: ${path}\nCommit ${batchCommit.sha}\n${batchCommit.message}\n${batchCommit.diff}\n\n`);
+        }
+        currentBatch = [commit];
+        batchTokens = commitTokens;
+      } else {
+        currentBatch.push(commit);
+        batchTokens += commitTokens;
+      }
+    }
+    
+    // Add the final batch for this file
+    for (const batchCommit of currentBatch) {
+      commits += `Files: ${path}\n`;
+      commits += `Commit ${batchCommit.sha}\n${batchCommit.message}\n${batchCommit.diff}\n\n`;
+      totalTokens += countTokens(`Files: ${path}\nCommit ${batchCommit.sha}\n${batchCommit.message}\n${batchCommit.diff}\n\n`);
+    }
+  }
+  
+  console.info(`Total estimated tokens in prompt: ${totalTokens}`);
+  
+  // If we're still over the limit, we need to handle this gracefully
+  if (totalTokens > maxTokens) {
+    console.warn(`Prompt exceeds token limit (${maxTokens}). This may cause issues with some providers.`);
+  }
+  
+  const prompt = `Generate a ${style} changelog entry for the following git commits:\n${commits}`;
+  
+  // Add a warning if prompt is very large
+  if (totalTokens > maxTokens * 0.9) { // Warn if we're at 90% of limit
+    console.warn(`Prompt is approaching token limit (${totalTokens}/${maxTokens}). Consider reducing max_diff_chars or using a provider with higher limits.`);
+  }
+  
+  return { prompt, totalTokens };
+}
+
+module.exports = {
+  collectCommitsFromGit,
+  bucketCommitsByFile,
+  normalizeFilePath,
+  buildPromptFromCommits,
+  countTokens
+};
+
+
+/***/ }),
+
 /***/ 2613:
 /***/ ((module) => {
 
@@ -32898,7 +33301,7 @@ module.exports = parseParams
 var __webpack_exports__ = {};
 const core = __nccwpck_require__(7484);
 const github = __nccwpck_require__(3228);
-const { execSync } = __nccwpck_require__(5317);
+const { execSync, spawnSync } = __nccwpck_require__(5317);
 const fs = __nccwpck_require__(9896);
 const path = __nccwpck_require__(6928);
 const ignore = __nccwpck_require__(298);
@@ -32910,6 +33313,10 @@ const providers = {
   ollama: __nccwpck_require__(23)
 };
 
+// Import refactored functions
+const commitProcessor = __nccwpck_require__(6714);
+const changelogHandler = __nccwpck_require__(9327);
+
 async function run() {
   try {
     const apiKey = core.getInput('api_key', { required: true });
@@ -32918,79 +33325,30 @@ async function run() {
     const style = core.getInput('style') || 'summary';
     const provider = core.getInput('provider') || 'openai';
     const apiBase = core.getInput('api_base_url') || undefined;
-    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information, do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs. If one commit modifies multiple files, keep the summary of the change to one bullet point.";
+    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information. For each file path or component that was modified, summarize all commits affecting that path/component into a single high-level bullet point. Do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs. If one commit modifies multiple files, keep the summary of the change to one bullet point. When multiple commits affect the same file, consolidate them into a single bullet point that captures the overall change for that file.";
     const model = core.getInput('model');
     const useTags = core.getInput('use_tags') === 'true' || false;
     const changelogPath = core.getInput('changelog_path') || 'CHANGELOG.md';
+    const maxTokens = parseInt(core.getInput('max_tokens')) || 12000; // Default to 12k tokens
+    const maxDiffChars = parseInt(core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
     
-    const ig = ignore();
-    if (fs.existsSync('.gitignore')) {
-      ig.add(fs.readFileSync('.gitignore', 'utf8'));
-    }
-    ig.add(['dist/', 'bin/']);
-    
     const headBranch = 'generate-ai-changelog';
     
-    // fetch previous changelog branch if it exists
-    try {
-      execSync(`git fetch origin ${headBranch}`, { stdio: 'ignore' });
-    } catch (_) {}
+    // Collect commits from git
+    const shas = commitProcessor.collectCommitsFromGit(baseBranch, headBranch, changelogPath, useTags);
     
-    // determine the base commit for collecting new changes
-    let baseCommit = '';
-    // if using tags as a reference, fetch it first
-    if (useTags) {
-      try {
-        const latestTag = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
-        baseCommit = execSync(`git rev-list -n 1 ${latestTag}`, { encoding: 'utf8' }).trim();
-      } catch (err) {
-        core.warning('No tags found, using default commit tracking');
-      }
-    } else {
-      try {
-        baseCommit = execSync(`git rev-parse origin/${headBranch}`, { encoding: 'utf8' }).trim();
-      } catch (_) {
-        try {
-          baseCommit = execSync(`git log -n 1 --pretty=format:%H -- ${changelogPath}`, { encoding: 'utf8' }).trim();
-        } catch (_) {
-          baseCommit = '';
-        }
-      }
-    }
+    // Bucket commits by file path
+    const commitBuckets = commitProcessor.bucketCommitsByFile(shas, changelogPath, maxDiffChars);
     
-    const range = baseCommit ? `${baseCommit}..HEAD` : `${baseBranch}..HEAD`;
-    const shas = execSync(`git rev-list ${range}`, { encoding: 'utf8' })
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .reverse();
+    // Build prompt from buckets
+    const { prompt, totalTokens } = commitProcessor.buildPromptFromCommits(commitBuckets, maxTokens, style);
     
-    let commits = '';
-    for (const sha of shas) {
-      const files = execSync(`git show --pretty="" --name-only ${sha}`, { encoding: 'utf8' })
-      .trim()
-      .split('\n')
-      .filter(Boolean);
-      const relevant = files.filter(f => !ig.ignores(f));
-      if (relevant.length === 0 || relevant.every(f => f === changelogPath)) {
-        continue;
-      }
-      const message = execSync(`git show -s --format=%s%n%b ${sha}`, { encoding: 'utf8' });
-      const diff = execSync(`git show ${sha} --patch --no-color --no-prefix -- ${relevant.join(' ')}`, { encoding: 'utf8' });
-      if (!diff.trim()) {
-        continue;
-      }
-      commits += `Commit ${sha}\n${message}\n${diff}\n`;
-    }
-    
-    if (!commits.trim()) {
+    if (!prompt.trim()) {
       core.info('No new commits found for changelog generation.');
       return;
     }
-    
-    const prompt = `Generate a ${style} changelog entry for the following git commits:\n${commits}`;
     
     let { generateChangelog } = providers[provider] || {};
     if (!generateChangelog) {
@@ -33009,81 +33367,32 @@ async function run() {
       return;
     }
     
-    let header;
-    if (useTags) {
-      try {
-        const latestTag = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
-        header = `## ${latestTag}`;
-      } catch {
-        header = `## ${new Date().toISOString().split('T')[0]}`;
-      }
-    } else {
-      header = `## ${new Date().toISOString().split('T')[0]}`;
-    }
+    // Generate header
+    const header = changelogHandler.generateChangelogHeader(useTags);
     const entry = `${changelog}\n`;
     
-    let existing = '';
-    try {
-      existing = execSync(`git show origin/${headBranch}:${changelogPath}`, { encoding: 'utf8' });
-    } catch (_) {
-      if (fs.existsSync(changelogPath)) {
-        existing = fs.readFileSync(changelogPath, 'utf8');
-      }
-    }
+    // Read existing changelog
+    const existing = changelogHandler.readExistingChangelog(headBranch, changelogPath);
     
-    if (!existing.startsWith('# Changelog')) {
-      existing = `# Changelog\n\n${existing}`;
-    }
-    const mainHeader = '# Changelog';
-    let rest = existing.replace(/^# Changelog\n*/, '');
+    // Update changelog content
+    const newContent = changelogHandler.updateChangelogContent(existing, header, entry, changelogPath);
     
-    if (rest.startsWith(`${header}\n`)) {
-      const lines = rest.split('\n');
-      let i = 1;
-      while (i < lines.length && !lines[i].startsWith('## ')) {
-        i++;
-      }
-      const current = lines.slice(0, i).join('\n');
-      const remainder = lines.slice(i).join('\n');
-      rest = `${current}\n${entry}${remainder}`.replace(/\n+$/, '\n');
-    } else {
-      rest = `${header}\n${entry}${rest}`;
-    }
+    // Write updated changelog
+    changelogHandler.writeChangelog(changelogPath, newContent);
     
-    const newContent = `${mainHeader}\n\n${rest}`;
-    fs.writeFileSync(changelogPath, newContent);
+    // Handle git operations
+    changelogHandler.handleGitOperations(headBranch, changelogPath);
     
-    execSync('git config user.name "github-actions"');
-    execSync('git config user.email "github-actions@users.noreply.github.com"');
-    execSync(`git checkout -B ${headBranch}`);
-    execSync(`git add ${changelogPath}`);
-    execSync('git commit -m "chore: update changelog"');
-    execSync(`git push --force origin ${headBranch}`);
-    
-    const { data: pulls } = await octokit.rest.pulls.list({
+    // Create or update pull request
+    await changelogHandler.createOrUpdatePullRequest(
+      octokit,
       owner,
       repo,
-      head: `${owner}:${headBranch}`,
-      state: 'open'
-    });
-    
-    if (pulls.length === 0) {
-      await octokit.rest.pulls.create({
-        owner,
-        repo,
-        title: 'chore: update changelog with recent changes',
-        head: headBranch,
-        base: baseBranch,
-        body: 'Automated changelog update.'
-      });
-    } else {
-      await octokit.rest.pulls.update({
-        owner,
-        repo,
-        pull_number: pulls[0].number,
-        body: 'Automated changelog update.'
-      });
-    }
+      headBranch,
+      baseBranch,
+      'chore: update changelog with recent changes',
+      'Automated changelog update.'
+    );
   } catch (err) {
     core.error(err.stack || err.message);
     core.setFailed(err.message);
@@ -33091,6 +33400,7 @@ async function run() {
 }
 
 run();
+
 module.exports = __webpack_exports__;
 /******/ })()
 ;
