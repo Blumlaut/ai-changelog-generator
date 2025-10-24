@@ -157,13 +157,13 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
     const diff = getCommitDiff(sha, relevant);
     
     // Truncate diff if it's too large
+    let truncatedDiff = diff;
     if (diff && diff.length > maxDiffChars) {
-      const truncatedDiff = diff.substring(0, maxDiffChars) + '\n... (diff truncated due to size limit)';
+      truncatedDiff = diff.substring(0, maxDiffChars) + '\n... (diff truncated due to size limit)';
       console.info(`Diff for commit ${sha} truncated from ${diff.length} to ${maxDiffChars} characters`);
-      // Note: In the original code, we don't update the diff here, but we could modify to pass truncated diff
     }
     
-    // Bucket commits by normalized file path
+    // Bucket commits by normalized file path - group all commits affecting the same file
     for (const file of relevant) {
       const normalizedPath = normalizeFilePath(file);
       if (!commitBuckets.has(normalizedPath)) {
@@ -172,7 +172,7 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
       commitBuckets.get(normalizedPath).push({
         sha,
         message,
-        diff
+        diff: truncatedDiff
       });
     }
   }
@@ -198,7 +198,11 @@ function buildPromptFromCommits(commitBuckets, maxTokens, style) {
   for (const [path, bucketCommits] of commitBuckets) {
     console.debug(`Processing bucket for path: ${path} with ${bucketCommits.length} commits`);
     
-    // For each file, we'll create batches of commits to stay within token limits
+    // Process commits in batches to stay within token limits
+    // We'll use a more conservative approach: if a single commit is larger than maxTokens, we'll still include it
+    // but warn about it. If multiple commits are too large, we'll split them appropriately.
+    
+    // First, let's check if we have a very large commit that might cause issues
     let currentBatch = [];
     let batchTokens = 0;
     
@@ -207,17 +211,24 @@ function buildPromptFromCommits(commitBuckets, maxTokens, style) {
       const commitText = `Files: ${path}\nCommit ${commit.sha}\n${commit.message}\n${commit.diff}\n\n`;
       const commitTokens = countTokens(commitText);
       
-      // If adding this commit would exceed token limits, start a new batch
-      if (currentBatch.length > 0 && (batchTokens + commitTokens) > maxTokens) {
+      // If adding this commit would exceed token limits, we need to handle it carefully
+      if (commitTokens > maxTokens) {
+        // If a single commit exceeds the limit, we still include it but warn
+        console.warn(`Commit ${commit.sha} exceeds token limit (${commitTokens} tokens). Including anyway.`);
+        commits += `Files: ${path}\nCommit ${commit.sha}\n${commit.message}\n${commit.diff}\n\n`;
+        totalTokens += commitTokens;
+      } else if (batchTokens + commitTokens > maxTokens && currentBatch.length > 0) {
         // Add the current batch to the prompt
         for (const batchCommit of currentBatch) {
           commits += `Files: ${path}\n`;
           commits += `Commit ${batchCommit.sha}\n${batchCommit.message}\n${batchCommit.diff}\n\n`;
           totalTokens += countTokens(`Files: ${path}\nCommit ${batchCommit.sha}\n${batchCommit.message}\n${batchCommit.diff}\n\n`);
         }
+        // Start new batch with current commit
         currentBatch = [commit];
         batchTokens = commitTokens;
       } else {
+        // Add to current batch
         currentBatch.push(commit);
         batchTokens += commitTokens;
       }
