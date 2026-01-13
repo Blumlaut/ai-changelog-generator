@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@actions/core": "^1.10.0",
-    "@actions/github": "^6.0.1",
+    "@actions/github": "^7.0.0",
     "ignore": "^7.0.5"
   },
   "devDependencies": {
