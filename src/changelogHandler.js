@@ -127,7 +127,7 @@ function handleGitOperations(headBranch, changelogPath) {
   execSync(`git checkout -B ${headBranch}`);
   execSync(`git add ${changelogPath}`);
   execSync('git commit -m "chore: update changelog"');
-  execSync(`git push --force origin ${headBranch}`);
+  execSync(`git push --force-with-lease origin ${headBranch}`);
 }
 
 module.exports = {
