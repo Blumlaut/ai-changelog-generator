@@ -26,6 +26,8 @@ async function run() {
     const style = core.getInput('style') || 'summary';
     const provider = core.getInput('provider') || 'openai';
     const apiBase = core.getInput('api_base_url') || undefined;
+    const useCategories = core.getInput('use_categories') === 'true' || false;
+    
     let defaultSystemPrompt = "You are a changelog generator. Create a short, informative changelog for the provided git commits. Summarize related changes into single bullet points. Do not include changelog-related changes. Return only the changelog entries as bullet points without any preamble.";
     
     if (useCategories) {
@@ -37,8 +39,7 @@ async function run() {
     const useTags = core.getInput('use_tags') === 'true' || false;
     const changelogPath = core.getInput('changelog_path') || 'CHANGELOG.md';
     const maxTokens = parseInt(core.getInput('max_tokens')) || 12000; // Default to 12k tokens
-    const maxDiffChars = parseInt(core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff
-    const useCategories = core.getInput('use_categories') === 'true' || false;
+    const maxDiffChars = parseInt(core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff;
     const octokit = getOctokit(token);
     const { owner, repo } = githubContext.repo;
     
