@@ -32239,7 +32239,7 @@ function handleGitOperations(headBranch, changelogPath) {
   execSync(`git checkout -B ${headBranch}`);
   execSync(`git add ${changelogPath}`);
   execSync('git commit -m "chore: update changelog"');
-  execSync(`git push --force origin ${headBranch}`);
+  execSync(`git push --force-with-lease origin ${headBranch}`);
 }
 
 module.exports = {
@@ -32386,7 +32386,7 @@ function normalizeFilePath(filePath) {
 }
 
 /**
- * Buckets commits by file path
+ * Buckets commits by file path with deduplication
  * @param {Array} commits - Array of commit objects
  * @param {string} changelogPath - Path to the changelog file
  * @param {number} maxDiffChars - Maximum characters per diff
@@ -32394,6 +32394,7 @@ function normalizeFilePath(filePath) {
  */
 function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
   const commitBuckets = new Map();
+  const commitCache = new Map(); // Cache to deduplicate commit data
   const ig = ignore();
   
   if (fs.existsSync('.gitignore')) {
@@ -32412,15 +32413,23 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
       continue;
     }
     
-    const message = getCommitMessage(sha);
-    const diff = getCommitDiff(sha, relevant);
-    
-    // Truncate diff if it's too large
-    let truncatedDiff = diff;
-    if (diff && diff.length > maxDiffChars) {
-      truncatedDiff = diff.substring(0, maxDiffChars) + '\n... (diff truncated due to size limit)';
-      console.info(`Diff for commit ${sha} truncated from ${diff.length} to ${maxDiffChars} characters`);
+    // Check if we've already processed this commit
+    if (!commitCache.has(sha)) {
+      const message = getCommitMessage(sha);
+      const diff = getCommitDiff(sha, relevant);
+      
+      // Truncate diff if it's too large
+      let truncatedDiff = diff;
+      if (diff && diff.length > maxDiffChars) {
+        truncatedDiff = diff.substring(0, maxDiffChars) + '\n... (diff truncated due to size limit)';
+        console.info(`Diff for commit ${sha} truncated from ${diff.length} to ${maxDiffChars} characters`);
+      }
+      
+      // Cache the commit data to avoid duplication
+      commitCache.set(sha, { message, diff: truncatedDiff });
     }
+    
+    const { message, diff } = commitCache.get(sha);
     
     // Bucket commits by normalized file path - group all commits affecting the same file
     for (const file of relevant) {
@@ -32431,12 +32440,13 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
       commitBuckets.get(normalizedPath).push({
         sha,
         message,
-        diff: truncatedDiff
+        diff
       });
     }
   }
   
-  console.info(`Completed bucketing: ${commitBuckets.size} buckets created from ${commits.length} commits`);
+  console.info(`Completed bucketing: ${commitBuckets.size} buckets created from ${commits.length} unique commits`);
+  console.info(`Deduplication saved ${commits.length - commitCache.size} duplicate commit entries`);
   return commitBuckets;
 }
 
@@ -32523,12 +32533,107 @@ function buildPromptFromCommits(commitBuckets, maxTokens, style) {
   return { prompt, totalTokens };
 }
 
+/**
+ * Categorizes a commit based on conventional commit format
+ * @param {string} message - Commit message
+ * @returns {string} Category name
+ */
+function categorizeCommit(message) {
+  const lines = message.trim().split('\n');
+  const firstLine = lines[0] || '';
+  
+  // Match conventional commit types
+  const conventionalMatch = firstLine.match(/^(\w+)(?:\(!?\w+\))?:/);
+  if (conventionalMatch) {
+    const type = conventionalMatch[1].toLowerCase();
+    const categoryMap = {
+      feat: 'Features',
+      feature: 'Features',
+      fix: 'Bug Fixes',
+      bugfix: 'Bug Fixes',
+      refactor: 'Refactoring',
+      perf: 'Performance',
+      performance: 'Performance',
+      docs: 'Documentation',
+      documentation: 'Documentation',
+      test: 'Tests',
+      chore: 'Chores',
+      ci: 'CI/CD',
+      build: 'Build System',
+      style: 'Styles',
+      revert: 'Reverts'
+    };
+    return categoryMap[type] || 'Other Changes';
+  }
+  
+  // Fallback: try to infer from message content
+  const lowerMessage = firstLine.toLowerCase();
+  if (lowerMessage.includes('fix') || lowerMessage.includes('bug') || lowerMessage.includes('patch')) {
+    return 'Bug Fixes';
+  }
+  if (lowerMessage.includes('feat') || lowerMessage.includes('feature') || lowerMessage.includes('add')) {
+    return 'Features';
+  }
+  if (lowerMessage.includes('docs') || lowerMessage.includes('readme') || lowerMessage.includes('documentation')) {
+    return 'Documentation';
+  }
+  if (lowerMessage.includes('refactor') || lowerMessage.includes('cleanup')) {
+    return 'Refactoring';
+  }
+  if (lowerMessage.includes('test') || lowerMessage.includes('spec')) {
+    return 'Tests';
+  }
+  
+  return 'Other Changes';
+}
+
+/**
+ * Groups commits by category
+ * @param {Map} commitBuckets - Map of file paths to commit arrays
+ * @returns {Map} Map of category names to commit arrays
+ */
+function groupCommitsByCategory(commitBuckets) {
+  const categoryGroups = new Map();
+  const defaultCategories = ['Features', 'Bug Fixes', 'Refactoring', 'Performance', 'Documentation', 'Tests', 'Dependencies', 'CI/CD', 'Other Changes'];
+  
+  // Initialize all categories
+  defaultCategories.forEach(cat => categoryGroups.set(cat, []));
+  
+  // Group commits by their category
+  for (const [path, bucketCommits] of commitBuckets) {
+    for (const commit of bucketCommits) {
+      const category = categorizeCommit(commit.message);
+      if (!categoryGroups.has(category)) {
+        categoryGroups.set(category, []);
+      }
+      
+      // Create a unique key to avoid duplicates
+      const commitKey = `${commit.sha}:${path}`;
+      const existing = categoryGroups.get(category).find(c => c.key === commitKey);
+      
+      if (!existing) {
+        categoryGroups.get(category).push({
+          key: commitKey,
+          sha: commit.sha,
+          message: commit.message,
+          diff: commit.diff,
+          path: path
+        });
+      }
+    }
+  }
+  
+  return categoryGroups;
+}
+
 module.exports = {
   collectCommitsFromGit,
   bucketCommitsByFile,
   normalizeFilePath,
   buildPromptFromCommits,
-  countTokens
+  countTokens,
+  categorizeCommit,
+  groupCommitsByCategory
 };
 
 
@@ -32998,12 +33103,19 @@ async function run() {
     const style = core.getInput('style') || 'summary';
     const provider = core.getInput('provider') || 'openai';
     const apiBase = core.getInput('api_base_url') || undefined;
-    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information. For each file path or component that was modified, summarize all commits affecting that path/component into a single high-level bullet point. Do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs. If one commit modifies multiple files, keep the summary of the change to one bullet point. When multiple commits affect the same file, consolidate them into a single bullet point that captures the overall change for that file.";
+    let defaultSystemPrompt = "You are a changelog generator. Create a short, informative changelog for the provided git commits. Summarize related changes into single bullet points. Do not include changelog-related changes. Return only the changelog entries as bullet points without any preamble.";
+    
+    if (useCategories) {
+      defaultSystemPrompt = "You are a changelog generator. Create a structured changelog for the provided git commits, organized by category (Features, Bug Fixes, Refactoring, Performance, Documentation, Tests, Dependencies, CI/CD, Other Changes). For each category that has changes, list a ## Category header followed by bullet points. Summarize related changes into single bullet points. Do not include changelog-related changes. Only include categories that have actual changes. Return only the changelog without any preamble.";
+    }
+    
+    const systemPrompt = core.getInput('system_prompt') || defaultSystemPrompt;
     const model = core.getInput('model');
     const useTags = core.getInput('use_tags') === 'true' || false;
     const changelogPath = core.getInput('changelog_path') || 'CHANGELOG.md';
     const maxTokens = parseInt(core.getInput('max_tokens')) || 12000; // Default to 12k tokens
     const maxDiffChars = parseInt(core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff
+    const useCategories = core.getInput('use_categories') === 'true' || false;
     const octokit = getOctokit(token);
     const { owner, repo } = githubContext.repo;
     
@@ -33022,7 +33134,7 @@ async function run() {
     }
     
     // Bucket commits by file path
-    const commitBuckets = commitProcessor.bucketCommitsByFile(shas, changelogPath, maxDiffChars);
+    let commitBuckets = commitProcessor.bucketCommitsByFile(shas, changelogPath, maxDiffChars);
     
     core.info(`Created ${commitBuckets.size} commit buckets`);
     
@@ -33031,6 +33143,12 @@ async function run() {
       core.warning('No commit buckets created - this may indicate empty diff buckets or all commits filtered out');
       core.info('This could be the source of the AI returning "I need the actual git commits" message');
       return;
+    }
+    
+    // Optionally group commits by category
+    if (useCategories) {
+      commitBuckets = commitProcessor.groupCommitsByCategory(commitBuckets);
+      core.info(`Grouped commits into ${commitBuckets.size} categories`);
     }
     
     // Build prompt from buckets
