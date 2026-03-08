@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-03-08
+- Updated dependencies to latest versions: @actions/core to ^2.0.3, @actions/github to ^9.0.0, and added @actions/http-client ^4.0.0
+- Refactored index.js to use dynamic imports for GitHub Actions modules and updated GitHub API client initialization
+- Bumped package version from 1.0.0 to 1.1.0
+- **src/commitProcessor.js**: Added deduplication to cache commit data across file buckets, reducing token usage for multi-file commits. Introduced semantic changelog formatting with conventional commit categories, including functions to detect commit types and organize commits into groups like Features, Bug Fixes, and Refactoring.
+- **action.yml**: Added a new `use_categories` input to enable grouping changelog entries by conventional commit categories.
+- **index.js**: Integrated semantic changelog formatting, adding logic to conditionally group commits by category and update the system prompt for categorized output.
+- **src/changelogHandler.js**: Changed git push command from `--force` to `--force-with-lease` for safer pushing.
 ## 2025-10-24
 - Added new configuration options for token and diff size limits in README.md
 - Refactored main application logic into modular components with improved commit processing
