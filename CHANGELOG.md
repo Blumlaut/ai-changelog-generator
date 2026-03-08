@@ -8,6 +8,10 @@
 - **action.yml**: Added a new `use_categories` input to enable grouping changelog entries by conventional commit categories.
 - **index.js**: Integrated semantic changelog formatting, adding logic to conditionally group commits by category and update the system prompt for categorized output.
 - **src/changelogHandler.js**: Changed git push command from `--force` to `--force-with-lease` for safer pushing.
+- Automatically create CHANGELOG.md with proper header when it doesn't exist and update README to note this feature
+- Document the new `use_categories` input option for grouping entries by conventional commit categories
+- Reorder setup steps in README for clarity
+- Fix invalid declaration in index.js and make minor prompting changes to specify bullet point format
 ## 2025-10-24
 - Added new configuration options for token and diff size limits in README.md
 - Refactored main application logic into modular components with improved commit processing
