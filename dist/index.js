@@ -33110,7 +33110,7 @@ async function run() {
     const apiBase = core.getInput('api_base_url') || undefined;
     const useCategories = core.getInput('use_categories') === 'true' || false;
     
-    let defaultSystemPrompt = "You are a changelog generator. Create a short, informative changelog for the provided git commits. Summarize related changes into single bullet points. Do not include changelog-related changes. Return only the changelog entries as bullet points without any preamble.";
+    let defaultSystemPrompt = "You are a changelog generator. Create a short, informative changelog for the provided git commits. Summarize related changes into single bullet points. Use hyphens (-) for all bullet points. Do not include changelog-related changes. Return only the changelog entries as bullet points without any preamble.";
     
     if (useCategories) {
       defaultSystemPrompt = "You are a changelog generator. Create a structured changelog for the provided git commits, organized by category (Features, Bug Fixes, Refactoring, Performance, Documentation, Tests, Dependencies, CI/CD, Other Changes). For each category that has changes, list a ## Category header followed by bullet points. Summarize related changes into single bullet points. Do not include changelog-related changes. Only include categories that have actual changes. Return only the changelog without any preamble.";
