@@ -26,12 +26,19 @@ async function run() {
     const style = core.getInput('style') || 'summary';
     const provider = core.getInput('provider') || 'openai';
     const apiBase = core.getInput('api_base_url') || undefined;
-    const systemPrompt = core.getInput('system_prompt') || "You are a changelog generator, create a short, informative, bullet-point changelog for the provided information. For each file path or component that was modified, summarize all commits affecting that path/component into a single high-level bullet point. Do not preface your response with anything or comment on the commits, only return the changelogs as a list of items. Do not include changes which mention the changelogs. If one commit modifies multiple files, keep the summary of the change to one bullet point. When multiple commits affect the same file, consolidate them into a single bullet point that captures the overall change for that file.";
+    let defaultSystemPrompt = "You are a changelog generator. Create a short, informative changelog for the provided git commits. Summarize related changes into single bullet points. Do not include changelog-related changes. Return only the changelog entries as bullet points without any preamble.";
+    
+    if (useCategories) {
+      defaultSystemPrompt = "You are a changelog generator. Create a structured changelog for the provided git commits, organized by category (Features, Bug Fixes, Refactoring, Performance, Documentation, Tests, Dependencies, CI/CD, Other Changes). For each category that has changes, list a ## Category header followed by bullet points. Summarize related changes into single bullet points. Do not include changelog-related changes. Only include categories that have actual changes. Return only the changelog without any preamble.";
+    }
+    
+    const systemPrompt = core.getInput('system_prompt') || defaultSystemPrompt;
     const model = core.getInput('model');
     const useTags = core.getInput('use_tags') === 'true' || false;
     const changelogPath = core.getInput('changelog_path') || 'CHANGELOG.md';
     const maxTokens = parseInt(core.getInput('max_tokens')) || 12000; // Default to 12k tokens
     const maxDiffChars = parseInt(core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff
+    const useCategories = core.getInput('use_categories') === 'true' || false;
     const octokit = getOctokit(token);
     const { owner, repo } = githubContext.repo;
     
@@ -50,7 +57,7 @@ async function run() {
     }
     
     // Bucket commits by file path
-    const commitBuckets = commitProcessor.bucketCommitsByFile(shas, changelogPath, maxDiffChars);
+    let commitBuckets = commitProcessor.bucketCommitsByFile(shas, changelogPath, maxDiffChars);
     
     core.info(`Created ${commitBuckets.size} commit buckets`);
     
@@ -59,6 +66,12 @@ async function run() {
       core.warning('No commit buckets created - this may indicate empty diff buckets or all commits filtered out');
       core.info('This could be the source of the AI returning "I need the actual git commits" message');
       return;
+    }
+    
+    // Optionally group commits by category
+    if (useCategories) {
+      commitBuckets = commitProcessor.groupCommitsByCategory(commitBuckets);
+      core.info(`Grouped commits into ${commitBuckets.size} categories`);
     }
     
     // Build prompt from buckets

@@ -274,10 +274,105 @@ function buildPromptFromCommits(commitBuckets, maxTokens, style) {
   return { prompt, totalTokens };
 }
 
+/**
+ * Categorizes a commit based on conventional commit format
+ * @param {string} message - Commit message
+ * @returns {string} Category name
+ */
+function categorizeCommit(message) {
+  const lines = message.trim().split('\n');
+  const firstLine = lines[0] || '';
+  
+  // Match conventional commit types
+  const conventionalMatch = firstLine.match(/^(\w+)(?:\(!?\w+\))?:/);
+  if (conventionalMatch) {
+    const type = conventionalMatch[1].toLowerCase();
+    const categoryMap = {
+      feat: 'Features',
+      feature: 'Features',
+      fix: 'Bug Fixes',
+      bugfix: 'Bug Fixes',
+      refactor: 'Refactoring',
+      perf: 'Performance',
+      performance: 'Performance',
+      docs: 'Documentation',
+      documentation: 'Documentation',
+      test: 'Tests',
+      chore: 'Chores',
+      ci: 'CI/CD',
+      build: 'Build System',
+      style: 'Styles',
+      revert: 'Reverts'
+    };
+    return categoryMap[type] || 'Other Changes';
+  }
+  
+  // Fallback: try to infer from message content
+  const lowerMessage = firstLine.toLowerCase();
+  if (lowerMessage.includes('fix') || lowerMessage.includes('bug') || lowerMessage.includes('patch')) {
+    return 'Bug Fixes';
+  }
+  if (lowerMessage.includes('feat') || lowerMessage.includes('feature') || lowerMessage.includes('add')) {
+    return 'Features';
+  }
+  if (lowerMessage.includes('docs') || lowerMessage.includes('readme') || lowerMessage.includes('documentation')) {
+    return 'Documentation';
+  }
+  if (lowerMessage.includes('refactor') || lowerMessage.includes('cleanup')) {
+    return 'Refactoring';
+  }
+  if (lowerMessage.includes('test') || lowerMessage.includes('spec')) {
+    return 'Tests';
+  }
+  
+  return 'Other Changes';
+}
+
+/**
+ * Groups commits by category
+ * @param {Map} commitBuckets - Map of file paths to commit arrays
+ * @returns {Map} Map of category names to commit arrays
+ */
+function groupCommitsByCategory(commitBuckets) {
+  const categoryGroups = new Map();
+  const defaultCategories = ['Features', 'Bug Fixes', 'Refactoring', 'Performance', 'Documentation', 'Tests', 'Dependencies', 'CI/CD', 'Other Changes'];
+  
+  // Initialize all categories
+  defaultCategories.forEach(cat => categoryGroups.set(cat, []));
+  
+  // Group commits by their category
+  for (const [path, bucketCommits] of commitBuckets) {
+    for (const commit of bucketCommits) {
+      const category = categorizeCommit(commit.message);
+      if (!categoryGroups.has(category)) {
+        categoryGroups.set(category, []);
+      }
+      
+      // Create a unique key to avoid duplicates
+      const commitKey = `${commit.sha}:${path}`;
+      const existing = categoryGroups.get(category).find(c => c.key === commitKey);
+      
+      if (!existing) {
+        categoryGroups.get(category).push({
+          key: commitKey,
+          sha: commit.sha,
+          message: commit.message,
+          diff: commit.diff,
+          path: path
+        });
+      }
+    }
+  }
+  
+  return categoryGroups;
+}
+
 module.exports = {
   collectCommitsFromGit,
   bucketCommitsByFile,
   normalizeFilePath,
   buildPromptFromCommits,
-  countTokens
+  countTokens,
+  categorizeCommit,
+  groupCommitsByCategory
 };

@@ -29,6 +29,9 @@ inputs:
   model:
     description: 'Optional model identifier for the provider'
     required: false
+  use_categories:
+    description: 'Group changelog entries by conventional commit categories (default false)'
+    required: false
 runs:
   using: 'node20'
   main: 'dist/index.js'
