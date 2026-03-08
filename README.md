@@ -10,11 +10,12 @@ entry is prepended to `CHANGELOG.md` under the current date so the
 latest changes appear first.
 
 ## Adding to your repository
-0. Create a "CHANGELOG.md" file with the contents of "# Changelog" in your main brain.
 1. Copy the workflow from `.github/workflows/generate-changelog.yml` into your
-   repository.
+    repository.
 2. Provide your AI provider API key as a secret named `AI_API_KEY`.
 3. Ensure your Repository has "Allow GitHub Actions to create and approve pull requests" and Read/Write Permissions enabled in the Github Action Settings
+
+**Note:** If a `CHANGELOG.md` file doesn't exist in your repository, the action will automatically create one with the proper "# Changelog" header on first run.
 
 
 ## Usage
@@ -57,6 +58,7 @@ The action accepts the following inputs:
 - `base_branch` – Branch to track for new commits (default `main`).
 - `changelog_path` - path of your changelog file (default `CHANGELOG.md`)
 - `use_tags` - Use git tags instead of rolling release style (default `false`)
+- `use_categories` - Group changelog entries by conventional commit categories like Features, Bug Fixes, Refactoring, etc. (default `false`)
 - `style` – `summary` or `full` changelog style.
 - `system_prompt` – Optional system prompt sent to the AI model before the commit summary.
 - `model` – Override the default model used by the provider.

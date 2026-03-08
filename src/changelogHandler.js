@@ -20,10 +20,10 @@ function generateChangelogHeader(useTags) {
 }
 
 /**
- * Reads existing changelog content
+ * Reads existing changelog content or creates a new one if it doesn't exist
  * @param {string} headBranch - The branch name to check
  * @param {string} changelogPath - Path to the changelog file
- * @returns {string} Existing changelog content
+ * @returns {string} Existing or new changelog content
  */
 function readExistingChangelog(headBranch, changelogPath) {
   let existing = '';
@@ -35,7 +35,12 @@ function readExistingChangelog(headBranch, changelogPath) {
     }
   }
   
-  if (!existing.startsWith('# Changelog')) {
+  // If changelog doesn't exist or is empty, create a new one with proper header
+  if (!existing || existing.trim() === '') {
+    existing = '# Changelog\n';
+    // Write the initial changelog file to ensure it exists
+    fs.writeFileSync(changelogPath, existing);
+  } else if (!existing.startsWith('# Changelog')) {
     existing = `# Changelog\n\n${existing}`;
   }
   
