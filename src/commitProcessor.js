@@ -127,7 +127,7 @@ function normalizeFilePath(filePath) {
 }
 
 /**
- * Buckets commits by file path
+ * Buckets commits by file path with deduplication
  * @param {Array} commits - Array of commit objects
  * @param {string} changelogPath - Path to the changelog file
  * @param {number} maxDiffChars - Maximum characters per diff
@@ -135,6 +135,7 @@ function normalizeFilePath(filePath) {
  */
 function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
   const commitBuckets = new Map();
+  const commitCache = new Map(); // Cache to deduplicate commit data
   const ig = ignore();
   
   if (fs.existsSync('.gitignore')) {
@@ -153,15 +154,23 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
       continue;
     }
     
-    const message = getCommitMessage(sha);
-    const diff = getCommitDiff(sha, relevant);
-    
-    // Truncate diff if it's too large
-    let truncatedDiff = diff;
-    if (diff && diff.length > maxDiffChars) {
-      truncatedDiff = diff.substring(0, maxDiffChars) + '\n... (diff truncated due to size limit)';
-      console.info(`Diff for commit ${sha} truncated from ${diff.length} to ${maxDiffChars} characters`);
+    // Check if we've already processed this commit
+    if (!commitCache.has(sha)) {
+      const message = getCommitMessage(sha);
+      const diff = getCommitDiff(sha, relevant);
+      
+      // Truncate diff if it's too large
+      let truncatedDiff = diff;
+      if (diff && diff.length > maxDiffChars) {
+        truncatedDiff = diff.substring(0, maxDiffChars) + '\n... (diff truncated due to size limit)';
+        console.info(`Diff for commit ${sha} truncated from ${diff.length} to ${maxDiffChars} characters`);
+      }
+      
+      // Cache the commit data to avoid duplication
+      commitCache.set(sha, { message, diff: truncatedDiff });
     }
+    
+    const { message, diff } = commitCache.get(sha);
     
     // Bucket commits by normalized file path - group all commits affecting the same file
     for (const file of relevant) {
@@ -172,12 +181,13 @@ function bucketCommitsByFile(commits, changelogPath, maxDiffChars) {
       commitBuckets.get(normalizedPath).push({
         sha,
         message,
-        diff: truncatedDiff
+        diff
       });
     }
   }
   
-  console.info(`Completed bucketing: ${commitBuckets.size} buckets created from ${commits.length} commits`);
+  console.info(`Completed bucketing: ${commitBuckets.size} buckets created from ${commits.length} unique commits`);
+  console.info(`Deduplication saved ${commits.length - commitCache.size} duplicate commit entries`);
   return commitBuckets;
 }
 
