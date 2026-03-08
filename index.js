@@ -1,5 +1,3 @@
-const core = require('@actions/core');
-const github = require('@actions/github');
 const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -17,6 +15,8 @@ const commitProcessor = require('./src/commitProcessor');
 const changelogHandler = require('./src/changelogHandler');
 
 async function run() {
+  const core = require('@actions/core');
+  const { getOctokit, context: githubContext } = await import('@actions/github');
   try {
     core.info('Starting AI Changelog Generator job');
     
@@ -32,8 +32,8 @@ async function run() {
     const changelogPath = core.getInput('changelog_path') || 'CHANGELOG.md';
     const maxTokens = parseInt(core.getInput('max_tokens')) || 12000; // Default to 12k tokens
     const maxDiffChars = parseInt(core.getInput('max_diff_chars')) || 5000; // Default to 5k chars per diff
-    const octokit = github.getOctokit(token);
-    const { owner, repo } = github.context.repo;
+    const octokit = getOctokit(token);
+    const { owner, repo } = githubContext.repo;
     
     const headBranch = 'generate-ai-changelog';
     
